@@ -3,27 +3,27 @@
 namespace Norwegian {
 
 DFAStringCodec::DFAStringCodec(std::shared_ptr<DFA<char> > dfa)
-    : mDFA{dfa}
-    , mPowers{mDFA->getIdentityMatrix()}
-    , mPowerSums{mDFA->getIdentityMatrix()} { }
+    : mDFA {dfa}
+, mPowers {mDFA->getIdentityMatrix()}
+, mPowerSums {mDFA->getIdentityMatrix()} { }
 
 void DFAStringCodec::precomputePowersUpto(size_t max) {
-	precomputeMatrixPowersUpto(
-	   max, mDFA->getIdentityMatrix(),
-	   mDFA->getNumericMatrix(), mPowers);
-	for (size_t n = mQfTimesPowers.size(); n <= max; ++n) {
-		mQfTimesPowers.emplace_back(mDFA->getNumericVectorQf() * mPowers[n]);
-	}
+    precomputeMatrixPowersUpto(
+        max, mDFA->getIdentityMatrix(),
+        mDFA->getNumericMatrix(), mPowers);
+    for (size_t n = mQfTimesPowers.size(); n <= max; ++n) {
+        mQfTimesPowers.emplace_back(mDFA->getNumericVectorQf() * mPowers[n]);
+    }
 
 }
 
 void DFAStringCodec::precomputePowerSumsUpto(size_t max) {
-	precomputeMatrixPowerSumsUpto(
+    precomputeMatrixPowerSumsUpto(
         max, mDFA->getIdentityMatrix(),
-		mDFA->getNumericMatrix(), mPowerSums);
-	for (size_t n = mCounts.size(); n <= max; ++n) {
-		mCounts.emplace_back((mDFA->getNumericVectorQf() * mPowerSums[n] * mDFA->getNumericVectorQi())(0,0));
-	}
+        mDFA->getNumericMatrix(), mPowerSums);
+    for (size_t n = mCounts.size(); n <= max; ++n) {
+        mCounts.emplace_back((mDFA->getNumericVectorQf() * mPowerSums[n] * mDFA->getNumericVectorQi())(0,0));
+    }
 }
 
 boost::optional<integer> DFAStringCodec::decode(const std::string& input) {
@@ -32,7 +32,7 @@ boost::optional<integer> DFAStringCodec::decode(const std::string& input) {
 
     if (input.length() == 0) {
         if (mDFA->hasEpsilon()) {
-            return boost::make_optional(integer{0});
+            return boost::make_optional(integer {0});
         } else {
             return boost::none;
         }
@@ -72,7 +72,7 @@ std::string DFAStringCodec::encode(const integer& targetNumber) {
     integer cumulative_shorter =
         /* initialize to # of lower bound */
         (mDFA->getNumericVectorQf() * mDFA->getNumericVectorQi())(0,0);
-	integer speculation = 0;
+    integer speculation = 0;
     size_t lower_bound = 0; // |w|-1 lower bound
     size_t upper_bound = 1; // |w|-1 upper bound (speculative)
 
@@ -106,7 +106,7 @@ std::string DFAStringCodec::encode(const integer& targetNumber) {
         }
     }
 
-	/* At this point we know how long the string is going to be */
+    /* At this point we know how long the string is going to be */
     size_t length = lower_bound + 1;
     precomputePowersUpto(length);
 
@@ -119,7 +119,7 @@ std::string DFAStringCodec::encode(const integer& targetNumber) {
     for (size_t k = 0; k < length; ++k) {
 
         integer infra_contrib = 0, additional = 0, speculation = 0;
-		boost::optional<DFA<char>::state_t> maybe_q;
+        boost::optional<DFA<char>::state_t> maybe_q;
 
         for (auto it = alphabet.begin(); it != alphabet.end(); ++it) {
             char a = *it;
@@ -128,32 +128,33 @@ std::string DFAStringCodec::encode(const integer& targetNumber) {
 
             if (maybe_q.is_initialized()) {
                 qNext = maybe_q.get();
-				speculation += mQfTimesPowers[length - k - 1](qNext);
+                speculation += mQfTimesPowers[length - k - 1](qNext);
             } else {
-				continue;
-            }
-
-			auto itLookahead = it; itLookahead++;
-			if (itLookahead == alphabet.cend()) {
-				result[k] = a;
-				q         = qNext;
-				infra_contrib += additional;
-				break;
-			}
-
-            if (cumulative_shorter + speculation <= targetNumber) {
-				additional = speculation;
                 continue;
             }
-			else {
+
+            auto itLookahead = it;
+            itLookahead++;
+            if (itLookahead == alphabet.cend()) {
                 result[k] = a;
                 q         = qNext;
-				infra_contrib += additional;
+                infra_contrib += additional;
+                break;
+            }
+
+            if (cumulative_shorter + speculation <= targetNumber) {
+                additional = speculation;
+                continue;
+            }
+            else {
+                result[k] = a;
+                q         = qNext;
+                infra_contrib += additional;
                 break; /* break out of alphabet */
             }
         } // alphabet
-		
-		cumulative_shorter += infra_contrib;
+
+        cumulative_shorter += infra_contrib;
     }
 
     result[lower_bound+1] = '\0';
