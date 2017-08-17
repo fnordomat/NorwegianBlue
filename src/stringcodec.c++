@@ -11,12 +11,19 @@ void DFAStringCodec::precomputePowersUpto(size_t max) {
 	precomputeMatrixPowersUpto(
 	   max, mDFA->getIdentityMatrix(),
 	   mDFA->getNumericMatrix(), mPowers);
+	for (size_t n = mQfTimesPowers.size(); n <= max; ++n) {
+		mQfTimesPowers.emplace_back(mDFA->getNumericVectorQf() * mPowers[n]);
+	}
+
 }
 
 void DFAStringCodec::precomputePowerSumsUpto(size_t max) {
 	precomputeMatrixPowerSumsUpto(
         max, mDFA->getIdentityMatrix(),
 		mDFA->getNumericMatrix(), mPowerSums);
+	for (size_t n = mCounts.size(); n <= max; ++n) {
+		mCounts.emplace_back((mDFA->getNumericVectorQf() * mPowerSums[n] * mDFA->getNumericVectorQi())(0,0));
+	}
 }
 
 boost::optional<integer> DFAStringCodec::decode(const std::string& input) {
@@ -24,7 +31,7 @@ boost::optional<integer> DFAStringCodec::decode(const std::string& input) {
     precomputePowersUpto(input.length());
 
     if (input.length() == 0) {
-        if ((mDFA->getNumericVectorQf() * mDFA->getNumericVectorQi())(0,0) > 0) {
+        if (mDFA->hasEpsilon()) {
             return boost::make_optional(integer{0});
         } else {
             return boost::none;
@@ -38,41 +45,36 @@ boost::optional<integer> DFAStringCodec::decode(const std::string& input) {
         return boost::none;
     }
 
-    Matrix M = mDFA->getNumericMatrix();
-
     integer lindex = 0;
 
     /* Count lexicographically inferior words within L(A,n)  */
     for (auto it = trace.begin(); it < trace.end(); ++it) {
         Vector Q_infra = it->second;
-        integer infra = (mDFA->getNumericVectorQf() * mPowers[trace.end() - it - 1] * Q_infra)(0,0);
+        integer infra = (mQfTimesPowers[trace.end() - it - 1] * Q_infra)(0,0);
         lindex += infra;
     }
 
     /* Count shorter words */
     precomputePowerSumsUpto(input.length() - 1);
-    lindex +=
-        (mDFA->getNumericVectorQf() * mPowerSums[input.length() - 1] * mDFA->getNumericVectorQi())(0,0);
+    lindex += mCounts[input.length() - 1];
 
     return boost::make_optional(lindex);
 }
 
 std::string DFAStringCodec::encode(const integer& targetNumber) {
 
-    auto alphabet = mDFA->getAlphabet();
+    const auto& alphabet = mDFA->getAlphabet();
 
-    if (targetNumber == 0 && (mDFA->getNumericVectorQf() * mDFA->getNumericVectorQi())(0,0) > 0) {
+    if (targetNumber == 0 && mDFA->hasEpsilon()) {
         return "";
     }
 
     integer cumulative_shorter =
         /* initialize to # of lower bound */
-        (mDFA->getNumericVectorQf() * mDFA->getNumericVectorQi())(0,0),
-        speculation = 0;
+        (mDFA->getNumericVectorQf() * mDFA->getNumericVectorQi())(0,0);
+	integer speculation = 0;
     size_t lower_bound = 0; // |w|-1 lower bound
     size_t upper_bound = 1; // |w|-1 upper bound (speculative)
-
-    Matrix p2 = mDFA->getIdentityMatrix();
 
     /* Open-ended binary search */
     while (lower_bound < upper_bound) {
@@ -80,10 +82,7 @@ std::string DFAStringCodec::encode(const integer& targetNumber) {
         precomputePowerSumsUpto(upper_bound);
 
         /* transition matrix for words of length <=upper_bound */
-        p2 = mPowerSums[upper_bound];
-
-        speculation =
-            (mDFA->getNumericVectorQf() * p2 * mDFA->getNumericVectorQi())(0,0);
+        speculation = mCounts[upper_bound];
 
         /* targetNumber = the expected number of lower-ranking strings,
            as counting starts from 0, obviously. */
@@ -97,7 +96,7 @@ std::string DFAStringCodec::encode(const integer& targetNumber) {
                 break;
             } else {
                 /* shrink interval, don't do anything else */
-                upper_bound -= (upper_bound - lower_bound)/2;
+                upper_bound -= (upper_bound - lower_bound) >> 1;
             }
         } else {
             /* we have a new lower bound */
@@ -111,8 +110,6 @@ std::string DFAStringCodec::encode(const integer& targetNumber) {
     size_t length = lower_bound + 1;
     precomputePowersUpto(length);
 
-    Vector qNextInfra(mDFA->numStates());
-
     std::string result;
     result.resize(length);
 
@@ -121,23 +118,20 @@ std::string DFAStringCodec::encode(const integer& targetNumber) {
     /* Step through the string, constructing it */
     for (size_t k = 0; k < length; ++k) {
 
-        qNextInfra.fill(0);
-
         integer infra_contrib = 0, additional = 0, speculation = 0;
+		boost::optional<DFA<char>::state_t> maybe_q;
 
         for (auto it = alphabet.begin(); it != alphabet.end(); ++it) {
             char a = *it;
 
-            auto maybe_q = mDFA->succ(q, a);
+            maybe_q = mDFA->succ(q, a);
 
             if (maybe_q.is_initialized()) {
                 qNext = maybe_q.get();
-                qNextInfra[qNext] += 1;
+				speculation += mQfTimesPowers[length - k - 1](qNext);
             } else {
 				continue;
             }
-
-            speculation = mDFA->getNumericVectorQf() * mPowers[length - k - 1] * qNextInfra;
 
 			auto itLookahead = it; itLookahead++;
 			if (itLookahead == alphabet.cend()) {

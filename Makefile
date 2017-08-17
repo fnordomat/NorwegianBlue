@@ -3,7 +3,8 @@ all: gtest
 CXX=ccache g++
 LD=g++
 
-CXXFLAGS=-std=gnu++1y -ggdb -O0 \
+# DEBUG: # -ggdb -O0
+CXXFLAGS=-std=gnu++1y -O3 \
  -Wall -Wextra -Wpedantic -Werror
 INCPATH = -I/usr/local/ssl -I./src -I/usr/include/eigen3
 LIB=-lgmp -lgmpxx
@@ -20,6 +21,10 @@ ftxxcode: $(OBJ)
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) tools/ftdecode.c++ -oftdecode.o
 	$(LD) $(LIB) $(LIB_FTXXCODE) ftencode.o $(OBJ) -o ftencode
 	$(LD) $(LIB) $(LIB_FTXXCODE) ftdecode.o $(OBJ) -o ftdecode
+
+benchmark: $(OBJ)
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Itest test/benchmark.cpp -obenchmark.o
+	$(LD) $(LIB) obj/*.o benchmark.o -o benchmark
 
 gtest: $(OBJ) 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Itest test/testgtest.cpp -ogtest.o

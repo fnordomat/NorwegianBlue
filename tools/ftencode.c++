@@ -61,6 +61,7 @@ int main(int argc, char** argv) {
 	if (dfa->hasFiniteLanguage()) {
 		std::cerr << "Warning, your language is finite." << std::endl;
 	}
+	// TODO: emit a warning when language is sparse
 
 	std::shared_ptr<Norwegian::IStringCodec> codec
 		= std::make_shared<Norwegian::DFAStringCodec>(dfa);

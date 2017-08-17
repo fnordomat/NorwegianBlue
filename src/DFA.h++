@@ -64,7 +64,8 @@ public:
 
 		std::vector<std::pair<state_t, Vector> > result;
 
-		state_t q_next;
+		state_t q_next, qtmp;
+		Vector infra(mNumQ);
 
 		for (;begin!=end; ++begin) {
 
@@ -79,22 +80,15 @@ public:
 			
 			q_next = it_successor->second;
 
-			Vector infra(mNumQ);
-			
+			infra.fill(0);
 			/* An ordering of Sigma is implicit in the map structure */
-//			for (auto it = transitionMap.begin();
-//				 it != it_successor; ++it) {
-//				infra(it->second)+=1;
-//			}
-			for (const auto& pair : transitionMap) {
-				if (pair.first < *begin) {
-					infra(pair.second) += 1;
-				}
+			for (auto it = transitionMap.begin();
+				 it != it_successor; ++it) {
+				infra(it->second)+=1;
 			}
 
 			result.emplace_back(std::make_pair(q_next, infra));
 
-			state_t qtmp;
 			qtmp = q; q = q_next; q_next = qtmp;
 		}
 
@@ -106,7 +100,6 @@ public:
 
 	boost::optional<state_t> succ(state_t q, Char c) const;
 
-// TODO this is not working yet
 	bool hasFiniteLanguage() const;
 
 	uint32_t numStates() const { return mNumQ; }
@@ -125,6 +118,7 @@ public:
 			addTransition(tr);
 			mAlphabet.insert(std::get<1>(tr));
 		}
+		updatePrecomputedPoperties();
 	}
 
 	template<class II1, class II2>
@@ -144,6 +138,7 @@ public:
 			mQf.insert(*fIt);
 		}
 		std::cout << boost::format("Made DFA with %d states, %d symbols, %d transitions and %d final states") % numstates % mAlphabet.size() % mDelta.size() % mQf.size() << std::endl;
+		updatePrecomputedPoperties();
 	}
 
 	const std::set<char> getAlphabet() const { return mAlphabet; }
@@ -152,40 +147,38 @@ public:
 		Matrix I = Matrix::Identity(mNumQ, mNumQ);
 		return I;
 	}
-
 	/* Interpret mDelta as a transition matrix A, that
 	 * can be multiplied with a state column vector: A \cdot Q */
-	Matrix getNumericMatrix() const {
-		Matrix A(mNumQ, mNumQ);
+	const Matrix& getNumericMatrix() const;
 
-		A.fill(0);
-
-		for (const auto& row: mDelta) {
-			for (const auto& column: row.second) {
-				++A(row.first, column.second);
-			}
-		}
-
-		return A.transpose();
+	void updatePrecomputedPoperties() {
+		updateNumericMatrix();
+		updateNumericVectorQf();
+		updateNumericVectorQi();
+		updateSparseMatrix();
+		updateHasEpsilon();
 	}
 
-	RowVector getNumericVectorQf() const {
-		RowVector F(mNumQ);
-		F.fill(0);
+	void updateHasEpsilon() {
+		mHasEpsilon =
+			(getNumericVectorQf() * getNumericVectorQi())(0,0) > 0;
+	}
+	
+	bool hasEpsilon() const { return mHasEpsilon; }
 
-		for (const state_t& q: mQf) {
-			++F(q);
-		}
+	void updateNumericMatrix();
 
-		return F;
+	const RowVector& getNumericVectorQf() const {
+		return mNumericVectorQf;
 	}
 
-	Vector getNumericVectorQi() const {
-		Vector F(mNumQ);
-		F.fill(0);
-		F(mQi) = 1;
-		return F;
+	void updateNumericVectorQf();
+
+	const Vector& getNumericVectorQi() const {
+		return mNumericVectorQi;
 	}
+
+	void updateNumericVectorQi();
 
 	state_t getQi() const { return mQi; }
 	const std::set<state_t>& getQf() const { return mQf; }
@@ -220,6 +213,12 @@ private:
 	std::unordered_map<state_t, succmap_t> mDelta;
 	std::set<state_t> mQf;
 	std::set<char> mAlphabet;
+
+    /* Precomputed properties */
+	Matrix mNumericMatrix;
+	RowVector mNumericVectorQf;
+	Vector mNumericVectorQi;
+	bool mHasEpsilon;
 };
 
 void precomputeMatrixPowersUpto(size_t max, const Matrix& I,

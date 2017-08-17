@@ -27,8 +27,10 @@ private:
 
 	std::shared_ptr<DFA<char> > mDFA;
 	std::vector<Matrix> mPowers;    //!< Precomputed powers of mDFA.mDelta()
-	std::vector<Matrix> mPowerSums; //!< Precomputed too
+	std::vector<RowVector> mQfTimesPowers; //!< Precomputed Qf * powers
 
+	std::vector<Matrix> mPowerSums; //!< Precomputed too
+	std::vector<integer> mCounts;
 };
 
 } // namespace

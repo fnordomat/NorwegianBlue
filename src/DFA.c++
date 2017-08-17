@@ -1,6 +1,44 @@
 #include "DFA.h++"
 
 template<>
+void DFA<char>::updateNumericMatrix() {
+	mNumericMatrix = Matrix(mNumQ, mNumQ);
+	Matrix& A = mNumericMatrix;
+	
+	A.fill(0);
+	
+	for (const auto& col: mDelta) {
+		for (const auto& row: col.second) {
+			++A(row.second, col.first);
+		}
+	}
+}
+
+template<>
+const Matrix& DFA<char>::getNumericMatrix() const {
+	return mNumericMatrix;
+}
+
+template<>
+void DFA<char>::updateNumericVectorQf() {
+	mNumericVectorQf = RowVector(mNumQ);
+	RowVector& F = mNumericVectorQf;
+	F.fill(0);
+	
+	for (const state_t& q: mQf) {
+		++F(q);
+	}
+}
+
+template<>
+void DFA<char>::updateNumericVectorQi() {
+	mNumericVectorQi = Vector(mNumQ);
+	Vector& I = mNumericVectorQi;
+	I.fill(0);
+	I(mQi) = 1;
+}
+
+template<>
 boost::optional<DFA<char>::state_t> DFA<char>::succ(state_t q, char c) const {
     const auto transitionEntry = mDelta.find(q);
     if (transitionEntry == mDelta.end()) {
