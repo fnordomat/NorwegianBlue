@@ -155,7 +155,6 @@ public:
 		updateNumericMatrix();
 		updateNumericVectorQf();
 		updateNumericVectorQi();
-		updateSparseMatrix();
 		updateHasEpsilon();
 	}
 
