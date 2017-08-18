@@ -441,7 +441,6 @@ struct push_back_container<RegEx::assocOp<RegEx::choice>, RegEx::regex>
 }
 }
 
-// TODO escaping still missing: reading of printf-style values \x00,...
 boost::optional<RegEx::regex> parseRegEx(const std::string& input) {
 
     if (input == "") {
@@ -458,6 +457,7 @@ boost::optional<RegEx::regex> parseRegEx(const std::string& input) {
     rule<iter_t, RegEx::unaryOp<RegEx::kleene>()> kleenep;
     rule<iter_t, RegEx::Literal()> literalp;
     rule<iter_t, RegEx::Literal()> escliteralp;
+    rule<iter_t, RegEx::Literal()> escxnumberp;
     rule<iter_t, RegEx::regex()> delimregexp;
     rule<iter_t, RegEx::regex()> nakedregexp;
     rule<iter_t, RegEx::regex()> xchoicep;
@@ -465,7 +465,8 @@ boost::optional<RegEx::regex> parseRegEx(const std::string& input) {
     /* Careful, avoid infinite left recursion! */
     emptyparenp = eps >> omit [ lit("()") ];
     escliteralp = lit('\\') >> boost::spirit::ascii::char_;
-    literalp = escliteralp | ~char_("\\\\()|*");
+    escxnumberp  = lit('\\') >> lit('x') >> int_parser<unsigned char, 16, 2, 2>();
+    literalp = escxnumberp | escliteralp | ~char_("\\\\()|*");
     kleenep = (emptyparenp | literalp | lit('(') >> nakedregexp >> lit(')')) >> +lit('*');
     xchoicep = concatp | delimregexp;
     concatp = +delimregexp;

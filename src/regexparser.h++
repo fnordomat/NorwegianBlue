@@ -109,6 +109,14 @@ regex simplify(const regex& r);
 } // namespace
 
 /**
+ * @note   syntax: grouping = (), kleene = *, concat = juxtaposition, choice = |
+ * () accepts nothing so ()* accepts the empty string, 
+ * backslash is escape character so backslash itself must be escaped,
+ * backslash escapes parentheses and special characters *|
+ * 
+ * input is interpreted as a bytestring,
+ * \x00 .. \xff notation can be used to encode arbitrary bytes.
+ * 
  * @return a valid shared_ptr to a RegEx, or a nullptr-shared_ptr in case of failure
  */
 boost::optional<RegEx::regex> parseRegEx(const std::string& input);
