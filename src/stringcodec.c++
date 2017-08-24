@@ -4,17 +4,16 @@ namespace Norwegian {
 
 DFAStringCodec::DFAStringCodec(std::shared_ptr<DFA<char> > dfa)
     : mDFA {dfa}
-, mPowers {mDFA->getIdentityMatrix()}
+, mSparsePowers {mDFA->getSparseIdentityMatrix()}
 , mPowerSums {mDFA->getIdentityMatrix()} { }
 
 void DFAStringCodec::precomputePowersUpto(size_t max) {
-    precomputeMatrixPowersUpto(
-        max, mDFA->getIdentityMatrix(),
-        mDFA->getNumericMatrix(), mPowers);
+    precomputeSparseMatrixPowersUpto(
+           max, mDFA->getSparseIdentityMatrix(),
+           mDFA->getSparseMatrix(), mSparsePowers);
     for (size_t n = mQfTimesPowers.size(); n <= max; ++n) {
-        mQfTimesPowers.emplace_back(mDFA->getNumericVectorQf() * mPowers[n]);
+        mQfTimesPowers.emplace_back(mDFA->getNumericVectorQf() * sparsePower(n));
     }
-
 }
 
 void DFAStringCodec::precomputePowerSumsUpto(size_t max) {
@@ -162,5 +161,8 @@ std::string DFAStringCodec::encode(const integer& targetNumber) {
     return result;
 }
 
+const SMatrix& DFAStringCodec::sparsePower(size_t n) {
+	return mSparsePowers[n];
+}
 
 } // namespace

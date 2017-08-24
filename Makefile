@@ -3,9 +3,13 @@ all: gtest
 CXX=ccache g++
 LD=g++
 
-# DEBUG: # -ggdb -O0
-CXXFLAGS=-std=gnu++1y -O3 \
- -Wall -Wextra -Wpedantic -Werror
+CXXFLAGS=-std=gnu++1y -Wall -Wextra -Wpedantic -Werror
+ifeq ($(DEBUG), 1)
+  CXXFLAGS+= -ggdb -O0
+else
+  CXXFLAGS+= -O3
+endif
+
 INCPATH = -I/usr/local/ssl -I./src -I/usr/include/eigen3
 LIB=-lgmp -lgmpxx
 

@@ -89,6 +89,19 @@ void precomputeMatrixPowersUpto(size_t max, const Matrix& I,
     }
 }
 
+void precomputeSparseMatrixPowersUpto
+  (size_t max, const SMatrix& I,
+   const SMatrix& M,
+   std::vector<SMatrix>& powers) {
+    if (!powers.size()) {
+        powers.push_back(I);
+    }
+    for (size_t n = powers.size(); n <= max; ++n) {
+        SMatrix& P = powers.back();
+        powers.emplace_back(P * M);
+    }
+}
+
 void precomputeMatrixPowerSumsUpto(size_t max, const Matrix& I,
                                    const Matrix& M,
                                    std::vector<Matrix>& powerSums) {

@@ -165,15 +165,30 @@ public:
         Matrix I = Matrix::Identity(mNumQ, mNumQ);
         return I;
     }
+
+    constexpr SMatrix getSparseIdentityMatrix() const {
+        Matrix I = Matrix::Identity(mNumQ, mNumQ);
+        return I.sparseView();
+    }
+
     /* Interpret mDelta as a transition matrix A, that
      * can be multiplied with a state column vector: A \cdot Q */
     const Matrix& getNumericMatrix() const;
+
+    const SMatrix& getSparseMatrix() const {
+        return mSparseMatrix;
+    }
 
     void updatePrecomputedPoperties() {
         updateNumericMatrix();
         updateNumericVectorQf();
         updateNumericVectorQi();
+        updateSparseMatrix();
         updateHasEpsilon();
+    }
+
+    void updateSparseMatrix() {
+        mSparseMatrix = getNumericMatrix().sparseView();
     }
 
     void updateHasEpsilon() {
@@ -238,6 +253,7 @@ private:
 
     /* Precomputed properties */
     Matrix mNumericMatrix;
+    SMatrix mSparseMatrix;
     RowVector mNumericVectorQf;
     Vector mNumericVectorQi;
     bool mHasEpsilon;
@@ -246,5 +262,6 @@ private:
 void precomputeMatrixPowersUpto(size_t max, const Matrix& I, const Matrix& M,
                                 std::vector<Matrix>& powers);
 
-void precomputeMatrixPowerSumsUpto(size_t max, const Matrix& I, const Matrix& M,
-                                   std::vector<Matrix>& powerSums);
+void precomputeSparseMatrixPowersUpto(size_t max, const SMatrix& I, const SMatrix& M, std::vector<SMatrix>& powers);
+
+void precomputeMatrixPowerSumsUpto(size_t max, const Matrix& I, const Matrix& M, std::vector<Matrix>& powerSums);
