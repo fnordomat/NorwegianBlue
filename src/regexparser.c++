@@ -578,7 +578,7 @@ std::shared_ptr<DFA<char> > makeDFAfromRegEx(const std::string& input) {
 #endif
         }
 
-        if (idx_q < max_explored) {
+        if ((signed long)idx_q < max_explored) {
             continue;
         }
 
