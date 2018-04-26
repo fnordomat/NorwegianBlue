@@ -36,24 +36,26 @@ template<typename tag> struct unaryOp;
 
 typedef boost::variant<
 nil, epsilon, Literal,
-     boost::recursive_wrapper<assocOp<choice> >,
-     boost::recursive_wrapper<assocOp<concat> >,
-     boost::recursive_wrapper<unaryOp<kleene> > > regex;
+     boost::recursive_wrapper<assocOp<choice>>,
+     boost::recursive_wrapper<assocOp<concat>>,
+     boost::recursive_wrapper<unaryOp<kleene>> > regex;
 
 template<typename tag>
 std::ostream& operator<<(std::ostream& o, const assocOp<tag>);
 template<typename tag>
 std::ostream& operator<<(std::ostream& o, const unaryOp<tag>);
 
+/**
+ * @brief Represents an associative binary operation node.
+ */
 template<typename tag> struct assocOp {
     assocOp() : mContents {} {}
     template <typename InputIterator>
     assocOp(const InputIterator inputBegin,
             const InputIterator inputEnd)
         : mContents(inputBegin, inputEnd)
-    {
-    }
-// this would be wrong:  assocOp(const regex& x) : mContents{x} {}
+    {}
+
     std::vector<regex> mContents;
     friend std::ostream& operator<< <>(std::ostream& o, const assocOp<tag> l);
     bool operator==(const assocOp<tag>& other) const {
@@ -75,8 +77,12 @@ template<typename tag> struct assocOp {
         return mContents.cend();
     }
 };
+
+/**
+ * @brief Represents a unary operation node.
+ */
 template<typename tag> struct unaryOp {
-    unaryOp() {}; // why?
+    unaryOp() {};
     explicit unaryOp(const regex& x) : mX(x) {};
     regex mX;
     friend std::ostream& operator<< <>(std::ostream& o, const unaryOp<tag> l);
@@ -86,16 +92,16 @@ template<typename tag> struct unaryOp {
 };
 
 /**
- * @return true iff \epsilon \in Language(r)
+ * @return true iff \[\epsilon \in Language(r)\]
  */
 bool containsEpsilon(const regex& r);
 
 /**
- * return something close to {(a, \partial_a(r)), ...}
+ * @return something close to {(a, \partial_a(r)), ...}
  * except epsilon-steps are excluded, so
  * XY -> c(X)Y only
  */
-std::unordered_map<char, std::unordered_set<regex> >
+std::unordered_map<char, std::unordered_set<regex>>
 computeSuccessors(const regex& r);
 
 struct RegexComparator {
@@ -103,7 +109,7 @@ struct RegexComparator {
 };
 
 /**
- * Apply a number of obvious simplifications to r
+ * @brief Apply a number of obvious simplifications to r.
  */
 regex simplify(const regex& r);
 } // namespace
@@ -114,6 +120,7 @@ regex simplify(const regex& r);
  * backslash is escape character so backslash itself must be escaped,
  * backslash escapes parentheses and special characters *|
  * 
+ * @brief
  * input is interpreted as a bytestring,
  * \x00 .. \xff notation can be used to encode arbitrary bytes.
  * 
@@ -124,5 +131,5 @@ boost::optional<RegEx::regex> parseRegEx(const std::string& input);
 /**
  * @return a valid shared_ptr to a DFA, or a nullptr-shared_ptr in case of failure
  */
-std::shared_ptr<DFA<char> > makeDFAfromRegEx(const std::string& input);
+std::shared_ptr<DFA<char>> makeDFAfromRegEx(const std::string& input);
 

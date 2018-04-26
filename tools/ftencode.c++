@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
         return false;
     }
 
-    std::shared_ptr<DFA<char> > dfa;
+    std::shared_ptr<DFA<char>> dfa;
 
     dfa = makeDFAfromRegEx(vm["regex"].as<std::string>());
     if (!dfa) {
@@ -59,9 +59,11 @@ int main(int argc, char** argv) {
         return -2;
     }
     if (dfa->hasFiniteLanguage()) {
-        std::cerr << "Warning, your language is finite." << std::endl;
+        std::cerr << "Warning, your language is finite, encoding may fail." << std::endl;
     }
-    // TODO: emit a warning when language is sparse
+    if (dfa->hasSparseLanguage()) {
+        std::cerr << "Warning, your language is sparse, this is not recommended (unary encodings are too long)." << std::endl;
+    }
 
     std::shared_ptr<Norwegian::IStringCodec> codec
         = std::make_shared<Norwegian::DFAStringCodec>(dfa);

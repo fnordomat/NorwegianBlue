@@ -14,10 +14,11 @@
 #include <gmpxx.h>
 
 #include <string>
-
-// For debug output only:
 #include <boost/format.hpp>
+
+#ifdef DEBUG_STDOUT
 #include <iostream>
+#endif
 
 template<class Char>
 class DFA {
@@ -65,10 +66,10 @@ public:
     }
 
     template<class II>
-    std::vector<std::pair<state_t, Vector> >
+    std::vector<std::pair<state_t, Vector>>
     read_infra(state_t q, II begin, II end) const {
 
-        std::vector<std::pair<state_t, Vector> > result;
+        std::vector<std::pair<state_t, Vector>> result;
 
         state_t q_next, qtmp;
         Vector infra(mNumQ);
@@ -113,22 +114,27 @@ public:
     }
 
     boost::optional<state_t> succ(state_t q, Char c) const;
-
+    
     bool hasFiniteLanguage() const;
-
+    
+    /**
+     * @brief Implies hasFiniteLanguage.
+     */
+    bool hasSparseLanguage() const;
+    
     uint32_t numStates() const {
         return mNumQ;
     }
 
     DFA(state_t numstates,
-        state_t initial,
-        std::initializer_list<std::tuple<state_t,Char,state_t> > transitions,
-        std::initializer_list<state_t> final
+        state_t initialState,
+        std::initializer_list<std::tuple<state_t,Char,state_t>> transitions,
+        std::initializer_list<state_t> finalState
        )
         : mNumQ {numstates}
-    , mQi {initial}
+    , mQi {initialState}
     , mDelta {}
-    , mQf {final}
+    , mQf {finalState}
     {
         for (const auto& tr : transitions) {
             addTransition(tr);
@@ -138,11 +144,11 @@ public:
     }
 
     template<class II1, class II2>
-    DFA(state_t numstates, state_t initial,
+    DFA(state_t numstates, state_t initialState,
         II1 transitionsBegin, II1 transitionsEnd,
         II2 finalBegin, II2 finalEnd)
         : mNumQ {numstates}
-    , mQi {initial}
+    , mQi {initialState}
     , mDelta {}
     , mQf {}
     {
@@ -153,7 +159,9 @@ public:
         for (II2 fIt = finalBegin; fIt != finalEnd; ++fIt) {
             mQf.insert(*fIt);
         }
+#ifdef DEBUG_STDOUT
         std::cout << boost::format("Made DFA with %d states, %d symbols, %d transitions and %d final states") % numstates % mAlphabet.size() % mDelta.size() % mQf.size() << std::endl;
+#endif
         updatePrecomputedPoperties();
     }
 
@@ -161,20 +169,21 @@ public:
         return mAlphabet;
     }
 
-    constexpr Matrix getIdentityMatrix() const {
-        Matrix I = Matrix::Identity(mNumQ, mNumQ);
-        return I;
-    }
+    Matrix getIdentityMatrix() const;
 
-    constexpr SMatrix getSparseIdentityMatrix() const {
-        Matrix I = Matrix::Identity(mNumQ, mNumQ);
-        return I.sparseView();
-    }
+    SMatrix getSparseIdentityMatrix() const;
 
-    /* Interpret mDelta as a transition matrix A, that
-     * can be multiplied with a state column vector: A \cdot Q */
+    /**
+     * @brief Interpret mDelta as a transition matrix A, that
+     * can be multiplied with a state column vector: \[A \cdot Q\]
+     *
+     * @note Not valid before update.
+     */
     const Matrix& getNumericMatrix() const;
 
+    /**
+     * @note Not valid before update.
+     */
     const SMatrix& getSparseMatrix() const {
         return mSparseMatrix;
     }
@@ -187,55 +196,49 @@ public:
         updateHasEpsilon();
     }
 
-    void updateSparseMatrix() {
-        mSparseMatrix = getNumericMatrix().sparseView();
-    }
+    void updateSparseMatrix();
 
-    void updateHasEpsilon() {
-        mHasEpsilon = (getNumericVectorQf() * getNumericVectorQi())(0,0) > 0;
-    }
+    void updateHasEpsilon();
 
+    void updateNumericMatrix();
+
+    void updateNumericVectorQf();
+
+    void updateNumericVectorQi();
+
+    /**
+     * @note Not valid before update.
+     * @return true iff L(A) contains the emptyword.
+     */
     bool hasEpsilon() const {
         return mHasEpsilon;
     }
 
-    void updateNumericMatrix();
-
+    /**
+     * @note Not valid before update.
+     */
     const RowVector& getNumericVectorQf() const {
         return mNumericVectorQf;
     }
 
-    void updateNumericVectorQf();
-
+    /**
+     * @note Not valid before update.
+     */
     const Vector& getNumericVectorQi() const {
         return mNumericVectorQi;
     }
 
-    void updateNumericVectorQi();
-
     state_t getQi() const {
         return mQi;
     }
+
     const std::set<state_t>& getQf() const {
         return mQf;
     }
 
     DFA& operator=(const DFA& other) = delete;
 
-    std::string toString() const {
-        std::stringstream ss;
-        ss << "DFA(" << mNumQ << "," << mQi << ",{";
-        for (const auto& qf : mQf) {
-            ss << qf << ",";
-        }
-        ss << "}) with" << std::endl;
-        for (const auto& x : mDelta) {
-            for (const auto& y: x.second) {
-                ss << boost::format("  %d %c %d") % x.first % y.first % y.second << std::endl;
-            }
-        }
-        return ss.str();
-    }
+    std::string toString() const;
 
 private:
 

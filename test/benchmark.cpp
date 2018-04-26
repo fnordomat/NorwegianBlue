@@ -15,7 +15,7 @@ int main() {
 
     using namespace Norwegian;
 
-    std::shared_ptr<DFA<char> > dfa1 = makeDFAfromRegEx("(0|abcdefghijklmnopqrstuvwxyz)*");
+    std::shared_ptr<DFA<char>> dfa1 = makeDFAfromRegEx("(0|abcdefghijklmnopqrstuvwxyz)*");
     std::shared_ptr<IStringCodec> codec = std::make_shared<DFAStringCodec>(dfa1);
 
     int i = 0;

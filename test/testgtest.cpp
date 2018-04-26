@@ -8,37 +8,48 @@
 #include <memory>
 #include <unordered_set>
 
-std::shared_ptr<DFA<char> > dfa0(new DFA<char>(2, 0, {std::make_tuple(0,'a',1), std::make_tuple(0,'c',0), std::make_tuple(1,'b',0)}, {0}));
+std::shared_ptr<DFA<char>> dfa0(new DFA<char>(2, 0, {std::make_tuple(0,'a',1), std::make_tuple(0,'c',0), std::make_tuple(1,'b',0)}, {0}));
 
-std::shared_ptr<DFA<char> > dfa1(new DFA<char>(3, 0, {std::make_tuple(0,'a',1), std::make_tuple(1,'c',2), std::make_tuple(2,'b',0)}, {0}));
+std::shared_ptr<DFA<char>> dfa1(new DFA<char>(3, 0, {std::make_tuple(0,'a',1), std::make_tuple(1,'c',2), std::make_tuple(2,'b',0)}, {0}));
 
-std::shared_ptr<DFA<char> > dfa2a = makeDFAfromRegEx("(a|b)*c");
-std::shared_ptr<DFA<char> > dfa2b = makeDFAfromRegEx("c(a|b)*");
+std::shared_ptr<DFA<char>> dfa2a = makeDFAfromRegEx("(a|b)*c");
+std::shared_ptr<DFA<char>> dfa2b = makeDFAfromRegEx("c(a|b)*");
 
 std::vector<std::string> regexen =
 {   ""
+    , "a|b"
+    , "a|"
+    , "|a"
+    , "||a"
+    , "|ab"
+    , "ab|"
+    , "(|)*"
     , "\\(e*"
     , "\\(*"
     , "\\)*"
-    , "(\\)|\\()\\(\\*|\\)(\\\\|(\\)\\)|\\())()*|()*"
-    , "(a|b)cd|e(a|(bc|d))()*|()*"
+    , "(|)"
+    , "(a|(ab*c)*)*|"
     , "()"
     , "()*"
     , "a|b|()*"
+    , "()*|(a|b)|()*"
+    , "(c|d)|(a|b)"
+    , "()*|(a|b)"
     , "(a|b)|()*"
     , "(a|b|()*)c*"
     , "a"
     , "a*"
     , "a**"
     , "()*"
-    , "a|b|()*"
-    , "(a|b)|()*"
+    , "(a|b)cdef(g|(hi|j))()*|()*"
+    , "(\\)|\\()\\(\\*\\|\\)(\\\\|(\\)\\)|\\())()*|()*"
+    , "(a|b)cd|e(a|(bc|d))()*|()*"
     , "(a|b|()*)c*"
     , "ab"
     , "abc"
     , "a|b"
     , "a|ba"
-    , "a|bc"
+    , "a|bc" 
     , "(a|b)"
     , "(a|b)c"
     , "aa*"
@@ -79,21 +90,43 @@ std::vector<std::string> regexenWhoseLanguageDoesNotContainEpsilon =
     , "(a|(ab*c)*|b(a|c))*d|d(b+c)a*"
 };
 
+std::vector<std::string> regexenWhoseLanguageIsSparse =
+{   "(a|b)cd|e(a|(bc|d))()*|()*"
+    , "()*"
+    , "a|b"
+    , "(a|b|()*)c*"
+    , "a"
+    , "a*"
+    , "ab"
+    , "abc"
+    , "a*bc"
+    , "ab*c"
+    , "abc*"
+    , "aaaa*"
+    , "a|aaaa*"
+    , "a*|b*"
+    , "a*b*c"
+};
+
+std::vector<std::string> regexenWhoseLanguageIsNotSparse =
+{   
+      "(bb|c)*"
+    , "(bb*|c)*"
+    , "(a|(ab*c)*)*|d"
+    , "(a|(ab*c)*|b(a|c))*|d"
+};
+
 std::vector<std::string> not_regexen =
 {   "*"
     , "*a"
-    , "|ab"
-    , "ab|"
     , "a|*"
     , "|*"
     , "(a|b"
     , "a|b)c"
-    , "(|)"
-    , "(a|(ab*c)*)*|"
     , "(a|(ab*c)*|b(a|c))|*d"
 };
 
-std::vector<std::pair<std::string, integer> > pairs0 =
+std::vector<std::pair<std::string, integer>> pairs0 =
 {   {"",0},
     {"c",1},
     {"ab",2},
@@ -131,7 +164,7 @@ std::vector<std::pair<std::string, integer> > pairs0 =
     {"ababcab",34},
 };
 
-std::vector<std::pair<std::string, integer> > pairs1 =
+std::vector<std::pair<std::string, integer>> pairs1 =
 {   {"",0},
     {"acb",1},
     {"acbacb",2},
@@ -141,7 +174,7 @@ std::vector<std::pair<std::string, integer> > pairs1 =
 };
 
 // (a+b)c
-std::vector<std::pair<std::string, integer> > pairs2a =
+std::vector<std::pair<std::string, integer>> pairs2a =
 {   {"c",0},
     {"ac",1},
     {"bc",2},
@@ -149,8 +182,7 @@ std::vector<std::pair<std::string, integer> > pairs2a =
     {"bbc",6}
 };
 
-// c(a+b)
-std::vector<std::pair<std::string, integer> > pairs2b =
+std::vector<std::pair<std::string, integer>> pairs2b =
 {   {"c",0},
     {"ca",1},
     {"cb",2},
@@ -175,14 +207,14 @@ TEST(dfa_test_case, norwegian_test)
 
 TEST(dfa_language_finiteness_test_case, norwegian_test)
 {
-    std::vector<std::shared_ptr<DFA<char> > >
+    std::vector<std::shared_ptr<DFA<char>> >
     finite_language_dfas =
     {   makeDFAfromRegEx("(a|b)c")
         , makeDFAfromRegEx("()*finite")
         , makeDFAfromRegEx("(a|c)b")
     };
 
-    std::vector<std::shared_ptr<DFA<char> > >
+    std::vector<std::shared_ptr<DFA<char>> >
     infinite_language_dfas =
     { dfa0, dfa1, dfa2a, dfa2b };
 
@@ -240,7 +272,6 @@ TEST(encode_test_case2, norwegian_test)
         out = codec->encode(pair.second);
         EXPECT_EQ(out, pair.first);
     }
-
 }
 
 TEST(encode_test_case, norwegian_test)
@@ -329,13 +360,13 @@ TEST(dfa_from_regex_aux_test_case, norwegian_test)
 
 TEST(dfa_from_regex_test_case, norwegian_test)
 {
-    std::shared_ptr<DFA<char> > dfa;
+    std::shared_ptr<DFA<char>> dfa;
 
     std::string example2a = {"()*()*(()*)(ab*c)*"};
     dfa = makeDFAfromRegEx(example2a);
     EXPECT_NE(dfa.get(), nullptr);
     if (dfa.get() != nullptr) {
-        /* Expect unsuccessful parses */
+        // Expect unsuccessful parses 
         EXPECT_EQ(boost::none, dfa->read(dfa->getQi(), "c"));
         EXPECT_EQ(boost::none, dfa->read(dfa->getQi(), "cba"));
 // well. this one ends in a non-final state.
@@ -343,7 +374,7 @@ TEST(dfa_from_regex_test_case, norwegian_test)
         EXPECT_EQ(boost::none, dfa->read(dfa->getQi(), "abab"));
         EXPECT_EQ(boost::none, dfa->read(dfa->getQi(), "babab"));
         EXPECT_EQ(boost::none, dfa->read(dfa->getQi(), "abbcbac"));
-        /* Expected successful parses */
+        // Expected successful parses 
         EXPECT_NE(boost::none, dfa->read(dfa->getQi(), ""));
         EXPECT_NE(boost::none, dfa->read(dfa->getQi(), "abbcabc"));
         EXPECT_NE(boost::none, dfa->read(dfa->getQi(), "acabbbbcabc"));
@@ -378,6 +409,45 @@ TEST(dfa_from_regex_test_case, norwegian_test)
         EXPECT_NE(boost::none, dfa->read(dfa->getQi(), "abbcabc"));
         EXPECT_NE(boost::none, dfa->read(dfa->getQi(), "bacca"));
         EXPECT_NE(boost::none, dfa->read(dfa->getQi(), "acabbbbcabc"));
+    }
+}
+
+
+TEST(dfa_from_regexen_test_case, norwegian_test)
+{
+    boost::optional<RegEx::regex> maybeRex;
+    for (const auto& example: regexen) {
+        try{
+            maybeRex = parseRegEx(example);
+            EXPECT_NE(boost::none, maybeRex);
+            if (maybeRex.is_initialized()) {
+                std::shared_ptr<DFA<char>> dfa = makeDFAfromRegEx(example);
+                EXPECT_EQ(true, dfa.use_count() > 0);
+            }
+        } catch (const boost::bad_get& e) {
+            std::cerr << e.what() << '\n';
+            throw;
+        }
+    }
+}
+
+TEST(regex_sparse_test_case, norwegian_test)
+{
+    for (const auto& example: regexenWhoseLanguageIsSparse) {
+        auto dfa = makeDFAfromRegEx(example);
+        std::cout << "Sparse? " << example << "\n";
+        EXPECT_NE(dfa, nullptr);
+        EXPECT_EQ(true, dfa->hasSparseLanguage());
+    }
+}
+
+TEST(regex_not_sparse_test_case, norwegian_test)
+{
+    for (const auto& example: regexenWhoseLanguageIsNotSparse) {
+        auto dfa = makeDFAfromRegEx(example);
+        std::cout << "Sparse? " << example << "\n";
+        EXPECT_NE(dfa, nullptr);
+        EXPECT_EQ(false, dfa->hasSparseLanguage());
     }
 }
 

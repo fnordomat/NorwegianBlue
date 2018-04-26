@@ -1,9 +1,7 @@
-// #define BOOST_SPIRIT_DEBUG
 #define BOOST_RESULT_OF_USE_DECLTYPE
 #define BOOST_SPIRIT_USE_PHOENIX_V3
 
-// #define DOT_DEBUG
-
+#include "declarations.h++"
 #include "regexparser.h++"
 
 #include <boost/spirit/include/qi.hpp>
@@ -84,22 +82,22 @@ struct hash<RegEx::regex> {
         if (r.type() == typeid(RegEx::Literal)) {
             return hashvalue ^ hash<char>()(boost::get<RegEx::Literal>(r).mC);
         }
-        if (r.type() == typeid(RegEx::assocOp<RegEx::choice>)) {
-            const auto& vec = boost::get<RegEx::assocOp<RegEx::choice> >(r).mContents;
+        if (r.type() == typeid(RegEx::assocOp<RegEx::choice>)) {            
+            const auto& vec = boost::get<RegEx::assocOp<RegEx::choice>>(r).mContents;
             for (const auto& c : vec) {
                 hashvalue ^= hash()(c);
             }
             return hashvalue;
         }
         if (r.type() == typeid(RegEx::assocOp<RegEx::concat>)) {
-            const auto& vec = boost::get<RegEx::assocOp<RegEx::concat> >(r).mContents;
+            const auto& vec = boost::get<RegEx::assocOp<RegEx::concat>>(r).mContents;
             for (const auto& c : vec) {
                 hashvalue ^= hash()(c);
             }
             return hashvalue;
         }
         if (r.type() == typeid(RegEx::unaryOp<RegEx::kleene>)) {
-            return hashvalue ^ hash()(boost::get<RegEx::unaryOp<RegEx::kleene> >(r).mX);
+            return hashvalue ^ hash()(boost::get<RegEx::unaryOp<RegEx::kleene>>(r).mX);
         }
         return hashvalue;
     }
@@ -109,7 +107,7 @@ struct hash<RegEx::regex> {
  * Must be a congruence w.r.t. operator== equality
  */
 template<>
-struct hash<std::unordered_set<RegEx::regex> > {
+struct hash<std::unordered_set<RegEx::regex>> {
     typedef std::unordered_set<RegEx::regex> argument_type;
     typedef std::size_t value_type;
 
@@ -127,14 +125,14 @@ regex simplify(const regex& r) {
     else if (r.type() == typeid(epsilon)) return r;
     else if (r.type() == typeid(Literal)) return r;
     else if (r.type() == typeid(unaryOp<kleene>)) {
-        const RegEx::regex& s = simplify(boost::get<unaryOp<kleene> >(r).mX);
+        const RegEx::regex& s = simplify(boost::get<unaryOp<kleene>>(r).mX);
         if (s.type() == typeid(unaryOp<kleene>)) return s;
         if (s.type() == typeid(epsilon)) return s;
         if (s.type() == typeid(nil)) return epsilon();
         else return unaryOp<kleene>(s);
     }
     else if (r.type() == typeid(assocOp<concat>)) {
-        const auto& contents = boost::get<assocOp<concat> >(r).mContents;
+        const auto& contents = boost::get<assocOp<concat>>(r).mContents;
         if (contents.size() == 0)
             return epsilon();
         if (contents.size() == 1)
@@ -145,7 +143,7 @@ regex simplify(const regex& r) {
         for (const auto& s: contents) {
             RegEx::regex ss = simplify(s);
             if (ss.type() == typeid(assocOp<concat>)) {
-                for (const regex& t : boost::get<assocOp<concat> >(ss).mContents) {
+                for (const regex& t : boost::get<assocOp<concat>>(ss).mContents) {
                     // shouldn't be necessary:
                     RegEx::regex tt = simplify(t);
                     if (tt.type() == typeid(nil)) {
@@ -180,7 +178,7 @@ regex simplify(const regex& r) {
     }
     else if (r.type() == typeid(assocOp<choice>)) {
 
-        const auto& contents = boost::get<assocOp<choice> >(r).mContents;
+        const auto& contents = boost::get<assocOp<choice>>(r).mContents;
         if (contents.size() == 0)
             return nil();
         if (contents.size() == 1)
@@ -191,7 +189,7 @@ regex simplify(const regex& r) {
         for (const auto& s: contents) {
             RegEx::regex ss = simplify(s);
             if (ss.type() == typeid(assocOp<choice>)) {
-                for (const regex& t : boost::get<assocOp<concat> >(ss).mContents) {
+                for (const regex& t : boost::get<assocOp<choice>>(ss).mContents) {
                     RegEx::regex tt = simplify(t);
                     if (tt.type() == typeid(nil)) {
                         continue;
@@ -237,7 +235,7 @@ std::unordered_set<regex> epsilonReachable(const regex& r) {
     else if (r.type() == typeid(unaryOp<kleene>))
     {
         std::unordered_set<regex> result = {epsilon()};
-        auto tmpResult = epsilonReachable(boost::get<unaryOp<kleene> >(r).mX);
+        auto tmpResult = epsilonReachable(boost::get<unaryOp<kleene>>(r).mX);
         for (const auto& s: tmpResult) {
             assocOp<concat> x;
             x.mContents.push_back(s);
@@ -248,7 +246,7 @@ std::unordered_set<regex> epsilonReachable(const regex& r) {
     }
     else if (r.type() == typeid(assocOp<choice>)) {
 
-        const auto& contents = boost::get<assocOp<choice> >(r).mContents;
+        const auto& contents = boost::get<assocOp<choice>>(r).mContents;
 
         if (contents.size() == 1) { // cannot occur with simplified input
             return epsilonReachable(contents.at(0));
@@ -263,7 +261,7 @@ std::unordered_set<regex> epsilonReachable(const regex& r) {
     }
     else if (r.type() == typeid(assocOp<concat>)) {
 
-        const auto& contents = boost::get<assocOp<concat> >(r).mContents;
+        const auto& contents = boost::get<assocOp<concat>>(r).mContents;
 
         if (contents.size() == 1) { // cannot occur with simplified input
             return epsilonReachable(contents.at(0));
@@ -289,7 +287,7 @@ std::unordered_set<regex> epsilonReachable(const regex& r) {
     throw std::exception();
 }
 
-std::unordered_map<char, std::unordered_set<regex> >
+std::unordered_map<char, std::unordered_set<regex>>
 computeSuccessors(const regex& r) {
 
     if (r.type() == typeid(nil)) return {};
@@ -299,8 +297,8 @@ computeSuccessors(const regex& r) {
                                std::unordered_set<regex>{epsilon()})
                };
     else if (r.type() == typeid(assocOp<choice>)) {
-        std::unordered_map<char, std::unordered_set<regex> > result = {};
-        for (const auto& sub: boost::get<assocOp<choice> >(r).mContents) {
+        std::unordered_map<char, std::unordered_set<regex>> result = {};
+        for (const auto& sub: boost::get<assocOp<choice>>(r).mContents) {
             const auto& subSuccessors = computeSuccessors(sub);
             for (const auto& kv : subSuccessors) {
                 result[kv.first].insert(kv.second.begin(),
@@ -311,11 +309,11 @@ computeSuccessors(const regex& r) {
         return result;
     }
     else if (r.type() == typeid(assocOp<concat>)) {
-        const assocOp<concat>& rex = boost::get<assocOp<concat> >(r);
+        const assocOp<concat>& rex = boost::get<assocOp<concat>>(r);
         if (rex.mContents.size() == 0) {
             return {}; // an empty product is equivalent to epsilon
         } else {
-            std::unordered_map<char, std::unordered_set<regex> > result = {};
+            std::unordered_map<char, std::unordered_set<regex>> result = {};
             for (const auto& kv : computeSuccessors(rex.mContents.at(0))) {
                 assocOp<concat> x;
                 x.mContents.push_back(
@@ -331,8 +329,8 @@ computeSuccessors(const regex& r) {
         }
     }
     else if (r.type() == typeid(unaryOp<kleene>)) {
-        const unaryOp<kleene>& rex = boost::get<unaryOp<kleene> >(r);
-        std::unordered_map<char, std::unordered_set<regex> > result = {};
+        const unaryOp<kleene>& rex = boost::get<unaryOp<kleene>>(r);
+        std::unordered_map<char, std::unordered_set<regex>> result = {};
         for (const auto& kv: computeSuccessors(rex.mX)) {
             for (const auto& s : kv.second) {
                 assocOp<concat> x;
@@ -352,13 +350,13 @@ bool containsEpsilon(const regex& r) {
     else if (r.type() == typeid(Literal)) return false;
     else if (r.type() == typeid(unaryOp<kleene>)) return true;
     else if (r.type() == typeid(assocOp<concat>)) {
-        for (const auto& sub: boost::get<assocOp<concat> >(r).mContents) {
+        for (const auto& sub: boost::get<assocOp<concat>>(r).mContents) {
             if (!containsEpsilon(sub)) return false;
         }
         return true;
     }
     else if (r.type() == typeid(assocOp<choice>)) {
-        for (const auto& sub: boost::get<assocOp<choice> >(r).mContents) {
+        for (const auto& sub: boost::get<assocOp<choice>>(r).mContents) {
             if (containsEpsilon(sub)) return true;
         }
         return false;
@@ -421,9 +419,9 @@ namespace boost {
 namespace spirit {
 namespace traits
 {
-template<> struct is_container<RegEx::assocOp<RegEx::choice> > : boost::mpl::true_ {};
+template<> struct is_container<RegEx::assocOp<RegEx::choice>> : boost::mpl::true_ {};
 
-template<> struct container_value<RegEx::assocOp<RegEx::choice> >
+template<> struct container_value<RegEx::assocOp<RegEx::choice>>
 {
     typedef RegEx::regex type;
 };
@@ -460,6 +458,7 @@ boost::optional<RegEx::regex> parseRegEx(const std::string& input) {
     rule<iter_t, RegEx::Literal()> escxnumberp;
     rule<iter_t, RegEx::regex()> delimregexp;
     rule<iter_t, RegEx::regex()> nakedregexp;
+    // Auxiliary category for subexpressions of choice (delimited or binding stronger than "|")
     rule<iter_t, RegEx::regex()> xchoicep;
 
     /* Careful, avoid infinite left recursion! */
@@ -468,13 +467,13 @@ boost::optional<RegEx::regex> parseRegEx(const std::string& input) {
     escxnumberp  = lit('\\') >> lit('x') >> int_parser<unsigned char, 16, 2, 2>();
     literalp = escxnumberp | escliteralp | ~char_("\\\\()|*");
     kleenep = (emptyparenp | literalp | lit('(') >> nakedregexp >> lit(')')) >> +lit('*');
-    xchoicep = concatp | delimregexp;
+    xchoicep = concatp | delimregexp | eps;
     concatp = +delimregexp;
     choicep = xchoicep % lit('|');
     delimregexp = kleenep | emptyparenp | literalp | lit('(') >> nakedregexp >> lit(')');
     nakedregexp = choicep | concatp | delimregexp;
 
-    /*	BOOST_SPIRIT_DEBUG_NODE( emptyparenp );
+    BOOST_SPIRIT_DEBUG_NODE( emptyparenp );
     	BOOST_SPIRIT_DEBUG_NODE( escliteralp );
     	BOOST_SPIRIT_DEBUG_NODE( literalp );
     	BOOST_SPIRIT_DEBUG_NODE( kleenep );
@@ -482,7 +481,7 @@ boost::optional<RegEx::regex> parseRegEx(const std::string& input) {
     	BOOST_SPIRIT_DEBUG_NODE( xchoicep );
     	BOOST_SPIRIT_DEBUG_NODE( concatp );
     	BOOST_SPIRIT_DEBUG_NODE( choicep );
-    	BOOST_SPIRIT_DEBUG_NODE( nakedregexp ); */
+    	BOOST_SPIRIT_DEBUG_NODE( nakedregexp );
 
     RegEx::regex r;
 
@@ -492,9 +491,11 @@ boost::optional<RegEx::regex> parseRegEx(const std::string& input) {
 
     size_t remaining = end - it;
 
-    /*    std::cout << "remaining: " << remaining << "/" << input.size() << ", status: " << status << std::endl;
+// TODO if DEBUG ...    
+ /*   std::cout << "remaining: " << remaining << "/" << input.size() << ", status: " << status << std::endl;
         std::cout << "trailing: ";
-        std::cout << std::string(it, end) << std::endl; */
+        std::cout << std::string(it, end) << std::endl;
+*/
 
     if (!status) {
         return boost::none;
@@ -506,10 +507,10 @@ boost::optional<RegEx::regex> parseRegEx(const std::string& input) {
     return boost::make_optional(r);
 }
 
-std::shared_ptr<DFA<char> > makeDFAfromRegEx(const std::string& input) {
+std::shared_ptr<DFA<char>> makeDFAfromRegEx(const std::string& input) {
     boost::optional<RegEx::regex> maybeRex = parseRegEx(input);
     if (!maybeRex) {
-        return std::shared_ptr<DFA<char> >(nullptr);
+        return std::shared_ptr<DFA<char>>(nullptr);
     }
 
     // If our DFA is going to have more than INT_MAX states, we're in trouble anyway
@@ -536,14 +537,14 @@ std::shared_ptr<DFA<char> > makeDFAfromRegEx(const std::string& input) {
 
     // Transition mapping of regexes (ignoring epsilon)
     using transitionMap_t = std::unordered_map<RegEx::regex,
-          std::unordered_map<char, std::unordered_set<RegEx::regex> > >;
+          std::unordered_map<char, std::unordered_set<RegEx::regex>> >;
     transitionMap_t transitionMap;
 
     std::set<powerstate_idx_t> dfaExplore = {0};
     signed long max_explored = -1; // initially, state 0 is unexplored.
 
-    std::unordered_map<powerstate_idx_t, std::unordered_map<char, powerstate_idx_t> > deltaMap;
-    std::vector<std::tuple<state_t, char, state_t> > deltaList;
+    std::unordered_map<powerstate_idx_t, std::unordered_map<char, powerstate_idx_t>> deltaMap;
+    std::vector<std::tuple<state_t, char, state_t>> deltaList;
     std::vector<state_t> finalList;
 
     for (std::set<powerstate_idx_t>::iterator it = dfaExplore.begin()
@@ -651,7 +652,7 @@ std::shared_ptr<DFA<char> > makeDFAfromRegEx(const std::string& input) {
     std::cout << "[DOT] }\n";
 #endif
 
-    return std::make_shared<DFA<char> >(dfaStates.size(), 0,
+    return std::make_shared<DFA<char>>(dfaStates.size(), 0,
                                         deltaList.begin(), deltaList.end(),
                                         finalList.begin(), finalList.end());
 }

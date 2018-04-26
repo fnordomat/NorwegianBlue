@@ -3,7 +3,8 @@ all: gtest
 CXX=ccache g++
 LD=g++
 
-CXXFLAGS=-std=gnu++1y -Wall -Wextra -Wpedantic
+CXXFLAGS=-std=gnu++1y -Wall -Wextra -Wpedantic -Wno-int-in-bool-context -Werror
+
 ifeq ($(DEBUG), 1)
   CXXFLAGS+= -ggdb -O0
 else
