@@ -461,10 +461,10 @@ boost::optional<RegEx::regex> parseRegEx(const std::string& input) {
     // Auxiliary category for subexpressions of choice (delimited or binding stronger than "|")
     rule<iter_t, RegEx::regex()> xchoicep;
 
-    /* Careful, avoid infinite left recursion! */
+    // Careful, avoid infinite left recursion!
     emptyparenp = eps >> omit [ lit("()") ];
     escliteralp = lit('\\') >> boost::spirit::ascii::char_;
-    escxnumberp  = lit('\\') >> lit('x') >> int_parser<unsigned char, 16, 2, 2>();
+    escxnumberp = lit('\\') >> lit('x') >> int_parser<unsigned char, 16, 2, 2>();
     literalp = escxnumberp | escliteralp | ~char_("\\\\()|*");
     kleenep = (emptyparenp | literalp | lit('(') >> nakedregexp >> lit(')')) >> +lit('*');
     xchoicep = concatp | delimregexp | eps;
@@ -473,15 +473,17 @@ boost::optional<RegEx::regex> parseRegEx(const std::string& input) {
     delimregexp = kleenep | emptyparenp | literalp | lit('(') >> nakedregexp >> lit(')');
     nakedregexp = choicep | concatp | delimregexp;
 
+#ifdef BOOST_SPIRIT_DEBUG
     BOOST_SPIRIT_DEBUG_NODE( emptyparenp );
-    	BOOST_SPIRIT_DEBUG_NODE( escliteralp );
-    	BOOST_SPIRIT_DEBUG_NODE( literalp );
-    	BOOST_SPIRIT_DEBUG_NODE( kleenep );
-    	BOOST_SPIRIT_DEBUG_NODE( delimregexp );
-    	BOOST_SPIRIT_DEBUG_NODE( xchoicep );
-    	BOOST_SPIRIT_DEBUG_NODE( concatp );
-    	BOOST_SPIRIT_DEBUG_NODE( choicep );
-    	BOOST_SPIRIT_DEBUG_NODE( nakedregexp );
+    BOOST_SPIRIT_DEBUG_NODE( escliteralp );
+    BOOST_SPIRIT_DEBUG_NODE( literalp );
+    BOOST_SPIRIT_DEBUG_NODE( kleenep );
+    BOOST_SPIRIT_DEBUG_NODE( delimregexp );
+    BOOST_SPIRIT_DEBUG_NODE( xchoicep );
+    BOOST_SPIRIT_DEBUG_NODE( concatp );
+    BOOST_SPIRIT_DEBUG_NODE( choicep );
+    BOOST_SPIRIT_DEBUG_NODE( nakedregexp );
+#endif
 
     RegEx::regex r;
 
@@ -491,17 +493,18 @@ boost::optional<RegEx::regex> parseRegEx(const std::string& input) {
 
     size_t remaining = end - it;
 
-// TODO if DEBUG ...    
- /*   std::cout << "remaining: " << remaining << "/" << input.size() << ", status: " << status << std::endl;
-        std::cout << "trailing: ";
-        std::cout << std::string(it, end) << std::endl;
-*/
+#ifdef DEBUG_STDOUT
+    std::cout << "remaining: " << remaining << "/" << input.size() << ", status: " << status << std::endl;
+    std::cout << "trailing: ";
+    std::cout << std::string(it, end) << std::endl;
+#endif
 
     if (!status) {
         return boost::none;
     }
+    // incomplete parse:
     if (remaining > 0) {
-        return boost::none;    // incomplete parse
+        return boost::none;
     }
 
     return boost::make_optional(r);
@@ -601,7 +604,7 @@ std::shared_ptr<DFA<char>> makeDFAfromRegEx(const std::string& input) {
 
                 for (const auto& kv: computeSuccessors(rex)) {
                     const auto symbol = kv.first;
-                    /* Cache the result for next time rex is encountered */
+                    // Cache the result for next time rex is encountered:
                     mapIt->second[symbol].insert(kv.second.cbegin(),
                                                  kv.second.cend());
                     temporaryMap[symbol].insert(kv.second.cbegin(),
@@ -652,8 +655,9 @@ std::shared_ptr<DFA<char>> makeDFAfromRegEx(const std::string& input) {
     std::cout << "[DOT] }\n";
 #endif
 
-    return std::make_shared<DFA<char>>(dfaStates.size(), 0,
-                                        deltaList.begin(), deltaList.end(),
-                                        finalList.begin(), finalList.end());
+    return std::make_shared<DFA<char>>(
+        dfaStates.size(), 0,
+        deltaList.begin(), deltaList.end(),
+        finalList.begin(), finalList.end());
 }
 

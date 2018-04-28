@@ -68,8 +68,8 @@ std::string DFAStringCodec::encode(const integer& targetNumber) {
         return "";
     }
 
+    // initialize to # of lower bound:
     integer cumulative_shorter =
-        // initialize to # of lower bound:
         (mDFA->getNumericVectorQf() * mDFA->getNumericVectorQi())(0,0);
     integer speculation = 0;
     size_t lower_bound = 0; // |w|-1 lower bound

@@ -114,6 +114,7 @@ std::vector<std::string> regexenWhoseLanguageIsNotSparse =
     , "(bb*|c)*"
     , "(a|(ab*c)*)*|d"
     , "(a|(ab*c)*|b(a|c))*|d"
+    , "((a|b|c)(a|b|c)(a |b ))*"
 };
 
 std::vector<std::string> not_regexen =

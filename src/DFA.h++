@@ -254,7 +254,7 @@ private:
     std::set<state_t> mQf;
     std::set<char> mAlphabet;
 
-    /* Precomputed properties */
+    // Precomputed properties:
     Matrix mNumericMatrix;
     SMatrix mSparseMatrix;
     RowVector mNumericVectorQf;
@@ -267,4 +267,5 @@ void precomputeMatrixPowersUpto(size_t max, const Matrix& I, const Matrix& M,
 
 void precomputeSparseMatrixPowersUpto(size_t max, const SMatrix& I, const SMatrix& M, std::vector<SMatrix>& powers);
 
-void precomputeMatrixPowerSumsUpto(size_t max, const Matrix& I, const Matrix& M, std::vector<Matrix>& powerSums);
+template<class MatrixT>
+void precomputeMatrixPowerSumsUpto(size_t max, const MatrixT& I, const MatrixT& M, std::vector<MatrixT>& powerSums);

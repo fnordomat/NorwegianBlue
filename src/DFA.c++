@@ -1,5 +1,9 @@
 #include "DFA.h++"
 
+#ifdef DEBUG_STDOUT
+#include <iostream>
+#endif
+
 using state_t = DFA<char>::state_t;
 
 template<class Char>
@@ -114,6 +118,160 @@ mpz_class euclid(mpz_class a, mpz_class b) {
     }
 }
 
+/**
+ * @brief Numeric class that allows us to count "one, two, many"
+ */
+struct Ternary {
+public:
+    enum class T {
+        Zero,
+        One,
+        Many,
+        Undef
+    };
+    Ternary() : value(T::Zero) {}
+    Ternary(T t) : value(t) {}
+    Ternary(const mpz_class& i) {
+        if (i == 0) value = T::Zero;
+        else if (i == 1) value = T::One;
+        else if (i >= 2) value = T::Many;
+        else value = T::Undef;
+    }
+    Ternary(int i) {
+        if (i == 0) value = T::Zero;
+        else if (i == 1) value = T::One;
+        else if (i >= 2) value = T::Many;
+        else value = T::Undef;
+    }
+    bool operator>(const Ternary& other) const {
+      return other.operator<(*this);
+    }
+    bool operator<(const Ternary& other) const {
+        switch (value) {
+        case T::Undef:
+            return false;
+        case T::Zero:
+            switch (other.value) {
+            case T::Zero:
+            case T::Undef:
+                return false;
+            default:
+                return true;
+            }
+        case T::One:
+            switch (other.value) {
+            case T::Many:
+                return true;
+            default:
+                return false;
+            }
+        case T::Many:
+            return false; // sic
+        }
+        return false;
+    }
+    Ternary operator*(const Ternary& other) const {
+        switch (value) {
+        case T::Undef:
+            return T::Undef;
+        case T::Zero:
+            switch (other.value) {
+            case T::Undef:
+                return T::Undef;
+            default:
+                return T::Zero;
+            }
+        case T::One:
+            return other.value;
+        case T::Many:
+            switch (other.value) {
+            case T::One:
+            case T::Many:
+                return T::Many;
+            case T::Zero:
+                return T::Zero;
+            case T::Undef:
+                return T::Undef;
+            }
+        }
+        return T::Undef;
+    }
+    const Ternary& operator+=(const Ternary& other) {
+        value = operator+(other).value;
+        return *this;
+    }
+    bool operator==(const Ternary& other) const {
+        return value == other.value;
+    }
+    bool operator==(const Ternary::T& otherValue) const {
+        return value == otherValue;
+    }
+    Ternary operator+(const Ternary& other) const {
+        switch (value) {
+        case T::Undef:
+            return T::Undef;
+        case T::Zero:
+            return other.value;
+        case T::One:
+            switch (other.value) {
+            case T::Zero:
+                return T::One;
+            case T::One:
+            case T::Many:
+                return T::Many;
+            case T::Undef: return T::Undef;
+            }
+        case T::Many:
+            switch (other.value) {
+            case T::Undef: return T::Undef;
+            default:    return T::Many;
+            }
+        }
+        return T::Undef;
+    }
+    T value;
+    friend std::ostream& operator<<(std::ostream& o, const Ternary& t) {
+        switch (t.value) {
+        case T::Undef: o << "T"; break;
+        case T::Zero:  o << "0"; break;
+        case T::One:   o << "1"; break;
+        case T::Many:  o << "M"; break;
+        }
+        return o;
+    }
+};
+
+namespace Eigen {
+template<> struct NumTraits<Ternary>
+    : GenericNumTraits<Ternary>
+{
+
+  enum {
+    IsComplex = 0,
+    IsInteger = 1,
+    IsSigned = 0,
+    RequireInitialization = 0,
+    ReadCost = 1,
+    AddCost = 1,
+    MulCost = 1
+  };
+
+   static inline int digits10() { return 0; }
+ 
+private:
+    static inline Ternary epsilon();
+    static inline Ternary dummy_precision();
+    static inline Ternary lowest();
+    static inline Ternary highest();
+    static inline Ternary infinity();
+    static inline Ternary quiet_NaN();
+};
+}
+
+typedef Eigen::Matrix<Ternary,Eigen::Dynamic,Eigen::Dynamic> TMatrix;
+typedef Eigen::Matrix<Ternary,Eigen::Dynamic,1> TVector;
+typedef Eigen::Matrix<Ternary,1,Eigen::Dynamic> TRowVector;
+
 template<class Char>
 bool DFA<Char>::hasSparseLanguage() const {
     
@@ -128,45 +286,51 @@ bool DFA<Char>::hasSparseLanguage() const {
 
     // This suggests the following (probably stupid) algorithm to decide sparseness:
     
-    // Compute n# (OEIS A034386) "Primorial 2. definition":
+    // Computation similar to n# (OEIS A034386) "Primorial 2. definition"
     mpz_class lcm = mpz_class(1);
     mpz_class counter = mpz_class(1);
     for (size_t i = 2; i <= mNumQ; ++i) {
         counter += mpz_class(1);
         mpz_class gcd = euclid(lcm, counter);
-        if (gcd == mpz_class(1)) {
-            lcm *= counter;
-        }
+        lcm *= counter / gcd;
     }
 
-    Matrix thePower = getIdentityMatrix();
+    TMatrix thePower = TMatrix::Identity(mNumQ, mNumQ);
+    TMatrix TI = TMatrix::Identity(mNumQ, mNumQ);
 
     mpz_class c    = lcm;
-    mpz_class crev = mpz_class(0);
-
+    mpz_class crev = 0;
     size_t trailing = 0;
 
-    while (c > mpz_class(0)) {
-        if (c % mpz_class(2) == 0) {
+    while (c > 0 && c % 2 == 0) {
+        c >>= 1;
+        crev <<= 1;
+        ++trailing;
+    }
+    while (c > 0) {
+        if (c % 2 == 0) {
             c >>= 1;
-            crev *= 2;
+            crev <<= 1;
         } else {
-            c -= 1;
-            if (crev == 0) {
-                ++trailing;
-            } else {
-            }
+            c >>= 1;
+            crev <<= 1;
             crev += 1;
         }
     }
 
-    while (crev >= mpz_class(1)) {
-        if (crev % mpz_class(2) == mpz_class(0)) {
-            crev /= mpz_class(2);
+    Matrix NM = getNumericMatrix();
+    TMatrix M = NM.cast<Ternary>();
+
+    TRowVector Qf = mNumericVectorQf.cast<Ternary>();
+    TVector Qi = mNumericVectorQi.cast<Ternary>();
+
+    while (crev >= 1) {
+        if (crev % 2 == 0) {
+            crev /= 2;
             thePower *= thePower;
         } else {
-            crev -= mpz_class(1);
-            thePower *= getNumericMatrix();
+            crev -= 1;
+            thePower *= M;
         }
     }
     
@@ -174,33 +338,34 @@ bool DFA<Char>::hasSparseLanguage() const {
         thePower *= thePower;
     }
     
-    Vector biLoopingStates(mNumQ);
+    // If the automaton were guaranteed to be minimal, this could be simplified.
+
+    TVector biLoopingStates(mNumQ);
 
     for (size_t i = 0 ; i < mNumQ ; i++) {
-        if (thePower(i,i) > mpz_class(1)) {
-            biLoopingStates[i] = 1;
+        if (thePower(i,i) == Ternary(Ternary::T::Many)) {
+            biLoopingStates[i] = Ternary(1);
         } else {
-            biLoopingStates[i] = 0;
+            biLoopingStates[i] = Ternary(0);
         }
     }
 
-    std::vector<Matrix> powersums;
-    precomputeMatrixPowerSumsUpto(
-      mNumQ, getIdentityMatrix(),
-      getNumericMatrix(), powersums);
-    
-    Vector v1 = powersums[mNumQ] * mNumericVectorQi;
+    std::vector<TMatrix> powerSums;
+    precomputeMatrixPowerSumsUpto<TMatrix>(
+      mNumQ, TI, M,
+      powerSums);
+
+    TVector v1 = powerSums[mNumQ] * Qi;
     for (size_t i = 0 ; i < mNumQ ; ++i) {
-        if (v1[i] > 0 && biLoopingStates[i] > 0) {
-            v1[i] = 1;
+        if (v1[i] > Ternary(0) && biLoopingStates[i] > Ternary(0)) {
+            v1[i] = Ternary(1);
         } else {
-            v1[i] = 0;
+            v1[i] = Ternary(0);
         }
     }
 
-    mpz_class result = getNumericVectorQf() * v1 ;
-
-    return result == 0;
+    Ternary result = Qf * v1;
+    return !(Ternary(0) < result);
 }
 
 template<>
@@ -247,17 +412,18 @@ void precomputeSparseMatrixPowersUpto
     }
 }
 
+template<class MatrixT>
 void precomputeMatrixPowerSumsUpto(
-    size_t max, const Matrix& I,
-    const Matrix& M,
-    std::vector<Matrix>& powerSums) {
+    size_t max, const MatrixT& I,
+    const MatrixT& M,
+    std::vector<MatrixT>& powerSums) {
 
     if (!powerSums.size()) {
         powerSums.push_back(I);
     }
 
     for (size_t n = powerSums.size(); n <= max; ++n) {
-        Matrix& P = powerSums.back();
+        MatrixT& P = powerSums.back();
         powerSums.emplace_back(P * M + I);
     }
 }
