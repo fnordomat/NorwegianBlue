@@ -2,7 +2,7 @@ AUTOMAKE_OPTIONS = foreign
 
 bin_PROGRAMS = gtest benchmark ftencode ftdecode
 
-SRC=obj/stringcodec.c++ obj/DFA.c++ obj/regexparser.c++
+SRC=obj/stringcodec.c++ obj/DFA.c++ obj/regexparser.c++ obj/aux.c++
 
 gtest_SOURCES = test/testgtest.cpp $(SRC)
 benchmark_SOURCES = test/benchmark.cpp $(SRC)
@@ -19,11 +19,7 @@ LDADD =
 
 all: gtest
 
-LIB_FTXXCODE =  -lboost_system -lboost_program_options 
-
 DEL_FILE = rm -f
-
-SUFFIXES: .o .c++
 
 obj/%.o: src/%.c++
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o "$@" "$<"

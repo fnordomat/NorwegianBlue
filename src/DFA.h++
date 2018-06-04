@@ -1,6 +1,7 @@
 #pragma once
 
 #include "declarations.h++"
+#include "aux.h++"
 
 #include <set>
 #include <map>
