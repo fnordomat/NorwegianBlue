@@ -110,6 +110,7 @@ Ternary Ternary::operator+(const Ternary& other) const {
             return T::Many;
         case T::Undef: return T::Undef;
         }
+	break;
     case T::Many:
         switch (other.value) {
         case T::Undef: return T::Undef;

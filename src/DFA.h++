@@ -9,6 +9,7 @@
 #include <memory>
 #include <unordered_map>
 #include <iterator>
+#include <tuple>
 
 #include <boost/optional.hpp>
 #include <Eigen/Core>
@@ -16,6 +17,8 @@
 
 #include <string>
 #include <boost/format.hpp>
+
+#include <json/json.h>
 
 #ifdef DEBUG_STDOUT
 #include <iostream>
@@ -28,93 +31,35 @@ public:
 
     using state_t = uint32_t;
 
-    template<class II>
-    boost::optional<state_t>
-    read(state_t q, II begin, II end) const {
+    //! has to have ordered traversal!
+    using succmap_t = std::map<Char, state_t>;
+    
+    using transition_t = std::tuple<state_t,Char,state_t>;
+    
+    std::string serialize() const;
+    
+    // double
+    std::tuple<double, double, double>
+    computeMDL(const std::vector<std::basic_string<Char>>& data, double dataWeight = 1.0) const;
+    
+    template<class II> boost::optional<state_t> read(state_t q, II begin, II end) const;
 
-        state_t q_next;
-
-        for (; begin!=end; ++begin) {
-
-            const auto transitionEntry = mDelta.find(q);
-            if (transitionEntry == mDelta.end()) {
-                return boost::none;
-            }
-
-            const auto it_successor = transitionEntry->second.find(*begin);
-            if (it_successor == transitionEntry->second.end()) {
-                return boost::none;
-            }
-
-            q_next = it_successor->second;
-
-            state_t qtmp;
-            qtmp = q;
-            q = q_next;
-            q_next = qtmp;
-        }
-
-        return boost::make_optional(q);
-    }
-
-    boost::optional<state_t> read(state_t q,
-                                  const std::vector<Char>&& word) const {
+    boost::optional<state_t> read(state_t q, const std::vector<Char>&& word) const {
         return read(q, word.begin(), word.end());
     }
 
     boost::optional<state_t> read(state_t q, const std::string& word) const {
         return read(q, word.begin(), word.end());
     }
-
-    template<class II>
-    std::vector<std::pair<state_t, Vector>>
-    read_infra(state_t q, II begin, II end) const {
-
-        std::vector<std::pair<state_t, Vector>> result;
-
-        state_t q_next, qtmp;
-        Vector infra(mNumQ);
-
-        for (; begin!=end; ++begin) {
-
-            /* Is the state present at all as LHS of the Delta map? */
-            const auto transitionEntry = mDelta.find(q);
-            if (transitionEntry == mDelta.end()) {
-                return {};
-            }
-
-            /* Is there a transition with the correct letter? */
-            const auto& transitionMap = transitionEntry->second;
-            const auto it_successor = transitionMap.find(*begin);
-            if (it_successor == transitionMap.end()) {
-                return {};
-            }
-
-            q_next = it_successor->second;
-
-            infra.fill(0);
-            /* An ordering of Sigma is implicit in the map structure */
-            for (auto it = transitionMap.begin();
-                    it != it_successor; ++it) {
-                infra(it->second)+=1;
-            }
-
-            result.emplace_back(std::make_pair(q_next, infra));
-
-            qtmp = q;
-            q = q_next;
-            q_next = qtmp;
-        }
-
-        /* Word not accepted, trace invalid */
-        if (mQf.find(q) == mQf.cend()) {
-            return {};
-        }
-
-        return result;
-    }
+    
+    template<class II> std::vector<std::pair<state_t, Vector>> read_infra(state_t q, II begin, II end) const;
 
     boost::optional<state_t> succ(state_t q, Char c) const;
+    
+    /**
+     * @pre !mergeSeed.empty()
+     */
+    void mergeStates(const std::set<state_t>& mergeSeed);
     
     bool hasFiniteLanguage() const;
     
@@ -126,13 +71,27 @@ public:
     uint32_t numStates() const {
         return mNumQ;
     }
+    
+    succmap_t getOutEdges(state_t q) const {
+        auto it = mDelta.find(q);
+        if (it == mDelta.cend()) return {};
+        return std::get<1>(*it);
+    }
+    bool isFinal(state_t q) const {
+        return mQf.find(q) != mQf.cend();
+    }
 
+    DFA() : mNumQ(1), mQi(0), mDelta{}, mQf{} {};
+    
+    /**
+     * @pre  numstates > 0 (otherwise, initialState makes no sense)
+     * @post Constructors guarantee initialisation of matrix representation
+     */
     DFA(state_t numstates,
         state_t initialState,
-        std::initializer_list<std::tuple<state_t,Char,state_t>> transitions,
-        std::initializer_list<state_t> finalState
-       )
-        : mNumQ {numstates}
+        std::initializer_list<transition_t> transitions,
+        std::initializer_list<state_t> finalState)
+    : mNumQ {numstates}
     , mQi {initialState}
     , mDelta {}
     , mQf {finalState}
@@ -141,7 +100,7 @@ public:
             addTransition(tr);
             mAlphabet.insert(std::get<1>(tr));
         }
-        updatePrecomputedPoperties();
+        updatePrecomputedProperties();
     }
 
     template<class II1, class II2>
@@ -163,9 +122,16 @@ public:
 #ifdef DEBUG_STDOUT
         std::cout << boost::format("Made DFA with %d states, %d symbols, %d transitions and %d final states") % numstates % mAlphabet.size() % mDelta.size() % mQf.size() << std::endl;
 #endif
-        updatePrecomputedPoperties();
+        updatePrecomputedProperties();
     }
 
+    DFA(const DFA& other)
+      : mNumQ {other.mNumQ}
+      , mQi {other.mQi}
+      , mDelta {other.mDelta}
+      , mQf {other.mQf}
+    {}
+    
     const std::set<char> getAlphabet() const {
         return mAlphabet;
     }
@@ -178,18 +144,18 @@ public:
      * @brief Interpret mDelta as a transition matrix A, that
      * can be multiplied with a state column vector: \[A \cdot Q\]
      *
-     * @note Not valid before update.
+     * @note Not valid before updatePrecomputedPoperties() / updateNumericMatrix().
      */
     const Matrix& getNumericMatrix() const;
 
     /**
-     * @note Not valid before update.
+     * @note Not valid before updatePrecomputedPoperties() / updateSparseMatrix().
      */
     const SMatrix& getSparseMatrix() const {
         return mSparseMatrix;
     }
 
-    void updatePrecomputedPoperties() {
+    void updatePrecomputedProperties() {
         updateNumericMatrix();
         updateNumericVectorQf();
         updateNumericVectorQi();
@@ -208,7 +174,7 @@ public:
     void updateNumericVectorQi();
 
     /**
-     * @note Not valid before update.
+     * @note Not valid before updatePrecomputedPoperties().
      * @return true iff L(A) contains the emptyword.
      */
     bool hasEpsilon() const {
@@ -216,14 +182,14 @@ public:
     }
 
     /**
-     * @note Not valid before update.
+     * @note Not valid before updatePrecomputedPoperties() / updateNumericVectorQf().
      */
     const RowVector& getNumericVectorQf() const {
         return mNumericVectorQf;
     }
 
     /**
-     * @note Not valid before update.
+     * @note Not valid before updatePrecomputedPoperties() / updateNumericVectorQi().
      */
     const Vector& getNumericVectorQi() const {
         return mNumericVectorQi;
@@ -237,34 +203,52 @@ public:
         return mQf;
     }
 
-    DFA& operator=(const DFA& other) = delete;
-
     std::string toString() const;
-
+    
+    bool isDead(state_t q) const;
+    
+    /**
+     * @return res[q] > 0 iff reachable
+     */
+    const Vector computeReachability(const std::set<state_t>& from) const {
+        Vector fromVec(mNumQ);
+        fromVec.fill(0);
+        for (auto q : from) { fromVec[q] = 1; }
+    
+        std::vector<Matrix> powersums;
+        
+        precomputeMatrixPowerSumsUpto(
+            mNumQ, getIdentityMatrix(),
+            getNumericMatrix(), powersums);
+        
+        Vector reachableVec;
+    
+        reachableVec = powersums[mNumQ] * fromVec;
+        
+        return reachableVec;
+    }
+    
 private:
 
-    void addTransition(const std::tuple<state_t,Char,state_t>& tr) {
+    void addTransition(const transition_t& tr) {
         mDelta[std::get<0>(tr)][std::get<1>(tr)] = std::get<2>(tr);
     }
 
-    const state_t mNumQ;
-    const state_t mQi;
-    //! has to have ordered traversal!
-    using succmap_t = std::map<Char, state_t>;
+    state_t mNumQ;
+    state_t mQi;
     std::unordered_map<state_t, succmap_t> mDelta;
     std::set<state_t> mQf;
     std::set<char> mAlphabet;
 
     // Precomputed properties:
-    Matrix mNumericMatrix;
-    SMatrix mSparseMatrix;
+    Matrix    mNumericMatrix;
+    SMatrix   mSparseMatrix;
     RowVector mNumericVectorQf;
-    Vector mNumericVectorQi;
-    bool mHasEpsilon;
+    Vector    mNumericVectorQi;
+    bool      mHasEpsilon;
 };
 
-void precomputeMatrixPowersUpto(size_t max, const Matrix& I, const Matrix& M,
-                                std::vector<Matrix>& powers);
+void precomputeMatrixPowersUpto(size_t max, const Matrix& I, const Matrix& M, std::vector<Matrix>& powers);
 
 void precomputeSparseMatrixPowersUpto(size_t max, const SMatrix& I, const SMatrix& M, std::vector<SMatrix>& powers);
 
