@@ -2,6 +2,10 @@
 
 Beautiful plumage to disguise your encrypted messages.
 
+<object id="parrot" data="https://github.com/fnordomat/NorwegianBlue/raw/master/doc/parrot-cleanish.svg" type="image/svg+xml">
+<img src="https://github.com/fnordomat/NorwegianBlue/raw/master/doc/parrot-cleanish.svg" width="96" height="96" alt="Norwegian Blue Parrot Drawing"/>
+</object>
+
 ## Description
 
 NorwegianBlue computes a 1:1 mapping between the natural numbers and the words of a given regular language L. Given a number, the encoding algorithm outputs a string of L. The decoding algorithm unambiguously retrieves the number from the string.
