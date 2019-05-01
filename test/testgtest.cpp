@@ -1,9 +1,11 @@
 #include "norwegian.h++"
+#include "Learner.h++"
+#include "Markov.h++"
 
 #include "gtest/gtest.h"
 
 #include <iostream>
-#include <boost/optional/optional_io.hpp>
+#include <random>
 
 #include <memory>
 #include <unordered_set>
@@ -191,7 +193,7 @@ std::vector<std::pair<std::string, integer>> pairs2b =
     {"caaa",7}
 };
 
-TEST(dfa_test_case, norwegian_test)
+TEST(norwegian_test, dfa_test_case)
 {
     DFA<char> dfa(2, 0, {std::make_tuple(0,'a',1), std::make_tuple(1,'b',0)}, {0});
     uint32_t input = 0;
@@ -206,7 +208,7 @@ TEST(dfa_test_case, norwegian_test)
     EXPECT_EQ(single_output.value_or(-1), 1);
 }
 
-TEST(dfa_language_finiteness_test_case, norwegian_test)
+TEST(norwegian_test, dfa_language_finiteness_test_case)
 {
     std::vector<std::shared_ptr<DFA<char>> >
     finite_language_dfas =
@@ -228,7 +230,7 @@ TEST(dfa_language_finiteness_test_case, norwegian_test)
     }
 }
 
-TEST(dfa_test_case2, norwegian_test)
+TEST(norwegian_test, dfa_test_case2)
 {
     DFA<char> dfa(3, 0, {std::make_tuple(0,'a',1), std::make_tuple(1,'b',2), std::make_tuple(2,'c',0)}, {0});
     uint32_t input = 0;
@@ -238,7 +240,7 @@ TEST(dfa_test_case2, norwegian_test)
     EXPECT_EQ(0, output.value_or(-1));
 }
 
-TEST(dfa_advanced_test_case, norwegian_test)
+TEST(norwegian_test, dfa_advanced_test_case)
 {
     DFA<char> dfa(2, 0, {std::make_tuple(0,'a',1), std::make_tuple(0,'c',0), std::make_tuple(1,'b',0)}, {0});
     std::string input = "cabab";
@@ -249,7 +251,7 @@ TEST(dfa_advanced_test_case, norwegian_test)
     EXPECT_LE(dfa.read_infra(0, input.begin(), input.end()).size(), 1);
 }
 
-TEST(encode_test_case2, norwegian_test)
+TEST(norwegian_test, encode_test_case2)
 {
     using namespace Norwegian;
 
@@ -275,7 +277,7 @@ TEST(encode_test_case2, norwegian_test)
     }
 }
 
-TEST(encode_test_case, norwegian_test)
+TEST(norwegian_test, encode_test_case)
 {
     using namespace Norwegian;
 
@@ -289,7 +291,7 @@ TEST(encode_test_case, norwegian_test)
     }
 }
 
-TEST(decode_test_case, norwegian_test)
+TEST(norwegian_test, decode_test_case)
 {
     using namespace Norwegian;
 
@@ -303,7 +305,7 @@ TEST(decode_test_case, norwegian_test)
     }
 }
 
-TEST(regex_parse_negative_test_case, norwegian_test)
+TEST(norwegian_test, regex_parse_negative_test_case)
 {
     for (const auto& bad_example: not_regexen) {
         boost::optional<RegEx::regex> maybeRex = parseRegEx(bad_example);
@@ -311,7 +313,7 @@ TEST(regex_parse_negative_test_case, norwegian_test)
     }
 }
 
-TEST(regex_containing_epsilon_test_case, norwegian_test)
+TEST(norwegian_test, regex_containing_epsilon_test_case)
 {
     for (const auto& example: regexenWhoseLanguageContainsEpsilon) {
         boost::optional<RegEx::regex> maybeRex = parseRegEx(example);
@@ -328,7 +330,7 @@ TEST(regex_containing_epsilon_test_case, norwegian_test)
     }
 }
 
-TEST(regex_not_containing_epsilon_test_case, norwegian_test)
+TEST(norwegian_test, regex_not_containing_epsilon_test_case)
 {
     for (const auto& example: regexenWhoseLanguageDoesNotContainEpsilon) {
         boost::optional<RegEx::regex> maybeRex = parseRegEx(example);
@@ -337,7 +339,7 @@ TEST(regex_not_containing_epsilon_test_case, norwegian_test)
     }
 }
 
-TEST(dfa_from_regex_aux_test_case, norwegian_test)
+TEST(norwegian_test, dfa_from_regex_aux_test_case)
 {
     using namespace RegEx;
 
@@ -359,7 +361,7 @@ TEST(dfa_from_regex_aux_test_case, norwegian_test)
     EXPECT_EQ(simplify(rex1), simplify(rex2));
 }
 
-TEST(dfa_from_regex_test_case, norwegian_test)
+TEST(norwegian_test, dfa_from_regex_test_case)
 {
     std::shared_ptr<DFA<char>> dfa;
 
@@ -414,7 +416,7 @@ TEST(dfa_from_regex_test_case, norwegian_test)
 }
 
 
-TEST(dfa_from_regexen_test_case, norwegian_test)
+TEST(norwegian_test, dfa_from_regexen_test_case)
 {
     boost::optional<RegEx::regex> maybeRex;
     for (const auto& example: regexen) {
@@ -432,7 +434,7 @@ TEST(dfa_from_regexen_test_case, norwegian_test)
     }
 }
 
-TEST(regex_sparse_test_case, norwegian_test)
+TEST(norwegian_test, regex_sparse_test_case)
 {
     for (const auto& example: regexenWhoseLanguageIsSparse) {
         auto dfa = makeDFAfromRegEx(example);
@@ -442,7 +444,7 @@ TEST(regex_sparse_test_case, norwegian_test)
     }
 }
 
-TEST(regex_not_sparse_test_case, norwegian_test)
+TEST(norwegian_test, regex_not_sparse_test_case)
 {
     for (const auto& example: regexenWhoseLanguageIsNotSparse) {
         auto dfa = makeDFAfromRegEx(example);
@@ -450,6 +452,137 @@ TEST(regex_not_sparse_test_case, norwegian_test)
         EXPECT_NE(dfa, nullptr);
         EXPECT_EQ(false, dfa->hasSparseLanguage());
     }
+}
+
+TEST(norwegian_test, learndfa_trie_test_case)
+{
+    Norwegian::Trie<char> t;
+    auto inputs = {"", "ab", "abc", "abde", "abdfg", "dddd"};
+    for (const std::string& input: inputs) {
+        t.insert(input.c_str(), input.size());
+    }
+    EXPECT_EQ(12, t.getNumStates());
+    EXPECT_EQ(inputs.size(), t.getNumFinalStates());
+}
+
+TEST(norwegian_test, dfa_equivalence_collapse_test_case)
+{
+    DFA<char> dfa1(
+        6, 0,
+        {std::make_tuple(0,'a',1),
+         std::make_tuple(1,'b',1),
+         std::make_tuple(2,'a',2),
+         std::make_tuple(2,'b',3),
+         std::make_tuple(0,'c',4),
+         std::make_tuple(2,'c',5),
+        },
+        {1}
+    );
+    
+    EXPECT_FALSE(dfa1.isDead(0));
+    EXPECT_FALSE(dfa1.isDead(1));
+    EXPECT_TRUE(dfa1.isDead(2));
+    EXPECT_TRUE(dfa1.isDead(3));
+    EXPECT_TRUE(dfa1.isDead(4));
+    EXPECT_TRUE(dfa1.isDead(5));
+    
+    DFA<char> dfa2 = dfa1;
+    
+    dfa2.mergeStates({0, 2});
+    EXPECT_EQ(2, dfa2.numStates()); // isn't it?
+    
+    std::cout << dfa2.serialize() << std::endl;
+    
+    std::random_device gen{"default"};
+    for (int i=0; i<5; ++i) {
+        std::string testWord = sampleRandomWord(dfa1, &gen, true);
+        std::cout << testWord << std::endl;
+        
+        EXPECT_NE(dfa2.read(dfa2.getQi(), testWord), boost::none);
+    }
+}
+
+TEST(norwegian_test, dfa_equivalence_collapse_test_case2)
+{
+    DFA<char> dfa1(
+        7, 0,
+        {std::make_tuple(0,'a',1),
+         std::make_tuple(1,'b',2),
+         std::make_tuple(2,'a',3),
+         std::make_tuple(3,'b',4),
+         std::make_tuple(4,'a',5),
+         std::make_tuple(5,'b',6),
+        },
+        {2,3,4,5,6}
+    );
+    
+    EXPECT_FALSE(dfa1.isDead(0));
+    EXPECT_FALSE(dfa1.isDead(1));
+    
+    DFA<char> dfa2 = dfa1;
+    
+    dfa2.mergeStates({0, 1});
+    EXPECT_EQ(6, dfa2.numStates());
+    
+    std::cout << dfa2.serialize() << std::endl;
+    
+    std::random_device gen{"default"};
+    for (int i=0; i<5; ++i) {
+        std::string testWord = sampleRandomWord(dfa1, &gen, true);
+        std::cout << testWord << std::endl;
+        
+        EXPECT_NE(dfa2.read(dfa2.getQi(), testWord), boost::none);
+    }
+}
+
+TEST(norwegian_test, dfa_reachability_check_test)
+{
+    // make some strongly connected dfas
+    for (uint32_t i=1; i<=8; ++i) {
+        std::vector<DFA<char>::transition_t> delta = {};
+        for (size_t j = 0; j < i ; ++j) {
+            delta.push_back(std::make_tuple(j, 'a', (j+1) % i));
+        }
+        std::vector<DFA<char>::state_t> final = {};
+        DFA<char> dfa(i, 0, delta.cbegin(), delta.cend(), final.cbegin(), final.cend());
+        std::set<uint32_t> from = {i-1};
+        Vector result = dfa.computeReachability(from);
+        // EXPECT_EQ((result > mpz_class(0)).all(), true);
+        for (size_t j = 0; j < i ; ++j) {
+            EXPECT_GT(result[j], mpz_class(0));
+        }
+    }
+    
+    // not strongly connected
+    for (uint32_t i=2; i<=8; ++i) {
+        std::vector<DFA<char>::transition_t> delta = {};
+        for (size_t j = 1; j < i-1 ; ++j) {
+            delta.push_back(std::make_tuple(j, 'a', j+1));
+        }
+        std::vector<DFA<char>::state_t> final = {};
+        DFA<char> dfa(i, 0, delta.cbegin(), delta.cend(), final.cbegin(), final.cend());
+        std::set<uint32_t> from = {1};
+        Vector result = dfa.computeReachability(from);
+        // EXPECT_EQ((result > mpz_class(0)).all(), true);
+        for (size_t j = 1; j < i ; ++j) {
+            EXPECT_GT(result[j], mpz_class(0));
+        }
+        EXPECT_EQ(result[0], mpz_class(0));
+    }
+    
+}
+
+TEST(norwegian_test, dfa_equivalence_collapse_regression1)
+{
+    std::shared_ptr<DFA<char>> dfa;
+
+    std::string inputString = {"asdjasdaklfjlask"};
+    dfa = makeDFAfromRegEx(inputString);
+    
+    DFA<char> dfa2 = *dfa;
+    dfa2.mergeStates({2, 1});
+    
+    EXPECT_EQ(true, true);
 }
 
 int main(int argc, char **argv)

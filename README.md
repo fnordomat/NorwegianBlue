@@ -6,6 +6,11 @@ Beautiful plumage to disguise your encrypted messages.
 
 NorwegianBlue computes a 1:1 mapping between the natural numbers and the words of a given regular language L. Given a number, the encoding algorithm outputs a string of L. The decoding algorithm unambiguously retrieves the number from the string.
 
+Contains
+* ftencode, to transform N to L
+* ftdecode, to transform L to N
+* some tests and experiments
+
 ### Why the name?
 
 Houmansadr, Brubaker and Shmatikov assert that the parrot, i.e. the protocol misidentification approach to censorship circumvention, is [dead][1]. We don't necessarily think so. Wherever clear text is transmitted, steganography can potentially be applied.
@@ -17,8 +22,12 @@ Houmansadr, Brubaker and Shmatikov assert that the parrot, i.e. the protocol mis
 
 ### Known issues / Project status
 
+* May contain traces of nuts and algorithms. Peruse at your own risk!
 * This is an alpha release. Do not rely on it for anything. Please report bugs.
 * Bad performance when the automaton has too many states (~ several dozen).
+* Automaton learning is experimental, not optimized and not "production-ready".
+* Automaton learning fails to guess some useful features, such as alphabet ranges
+* No support for using the encoding as a network transport yet.
 
 ### References / Inspiration
 
