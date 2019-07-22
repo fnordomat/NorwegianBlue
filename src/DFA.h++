@@ -126,11 +126,19 @@ public:
     }
 
     DFA(const DFA& other)
-      : mNumQ {other.mNumQ}
-      , mQi {other.mQi}
-      , mDelta {other.mDelta}
-      , mQf {other.mQf}
+      : mNumQ   {other.mNumQ}
+      , mQi     {other.mQi}
+      , mDelta  {other.mDelta}
+      , mQf     {other.mQf}
     {}
+
+    DFA& operator=(const DFA& other) {
+        mNumQ  = other.mNumQ;
+        mQi    = other.mQi;
+        mDelta = other.mDelta;
+        mQf    = other.mQf;
+        return *this;
+    }
     
     const std::set<char> getAlphabet() const {
         return mAlphabet;

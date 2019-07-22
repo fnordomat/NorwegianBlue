@@ -2,8 +2,8 @@ AC_INIT([NorwegianBlue], [0.0.1-alpha], [fnordomat])
 
 AM_INIT_AUTOMAKE([subdir-objects])
 
-CPPFLAGS="-I/usr/include/eigen3 -Isrc ${CPPFLAGS}"
-CXXFLAGS="-std=gnu++14 -Wall -Wextra -Wpedantic -Wno-int-in-bool-context -Werror -I/usr/include/eigen3 -Isrc ${CXXFLAGS}"
+CPPFLAGS="-isystem /usr/include/eigen3 -Isrc ${CPPFLAGS}"
+CXXFLAGS="-std=gnu++14 -Wall -Wextra -Wpedantic -Wno-int-in-bool-context -Werror -isystem /usr/include/eigen3 -Isrc ${CXXFLAGS}"
 
 AC_PROG_CXX(["ccache g++" g++ clang++])
 AC_LANG([C++])
