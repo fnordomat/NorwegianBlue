@@ -6,6 +6,8 @@ Beautiful plumage to disguise your encrypted messages.
 <img src="https://github.com/fnordomat/NorwegianBlue/raw/master/doc/parrot-cleanish.svg" width="96" height="96" alt="Norwegian Blue Parrot Drawing"/>
 </object>
 
+Note: this project is superseded by my new project [ChatBox][3], which solves the problem by an entirely different approach and isn't limited to regular languages.
+
 ## Description
 
 NorwegianBlue computes a 1:1 mapping between the natural numbers and the words of a given regular language L. Given a number, the encoding algorithm outputs a string of L. The decoding algorithm unambiguously retrieves the number from the string.
@@ -54,4 +56,4 @@ Compile:
 
 [1]: https://www.cs.cornell.edu/~shmat/shmat_oak13parrot.pdf
 [2]: https://github.com/kpdyer/libfte
-
+[3]: https://notabug.org/fnordomat/chatbox
